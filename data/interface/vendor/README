@@ -1,0 +1,11 @@
+This app uses the following open-source projects:
+
+codemirror-5.58.1 >> *: https://codemirror.net/codemirror.zip
+sortable-1.10.2 >> *: https://github.com/SortableJS/sortablejs/archive/1.10.2.zip
+
+other-third-party-libraries >> jsonlint.js: https://github.com/zaach/jsonlint/blob/master/lib/jsonlint.js
+other-third-party-libraries >> jshint-2.12.0.js: https://github.com/jshint/jshint/blob/master/dist/jshint.js
+other-third-party-libraries >> csslint-1.0.5.js: https://github.com/CSSLint/csslint/blob/master/dist/csslint.js
+other-third-party-libraries >> searchbox.js: https://github.com/coderaiser/cm-searchbox/blob/master/lib/searchbox.js
+other-third-party-libraries >> one-dark-1.1.1.css: https://github.com/Aerobird98/codemirror-one-dark-theme/blob/master/one-dark.css
+other-third-party-libraries >> show-invisibles.js: https://github.com/coderaiser/cm-show-invisibles/blob/master/lib/show-invisibles.js
