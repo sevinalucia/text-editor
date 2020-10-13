@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Text Editor</title>
+    <link rel="stylesheet" href="index.css">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <!-- -->
+    <link rel="stylesheet" href="vendor/codemirror-5.58.1/lib/codemirror.css">
+    <!-- -->
+    <link rel="stylesheet" href="vendor/codemirror-5.58.1/addon/lint/lint.css">
+    <link rel="stylesheet" href="vendor/codemirror-5.58.1/addon/dialog/dialog.css">
+    <link rel="stylesheet" href="vendor/codemirror-5.58.1/addon/hint/show-hint.css">
+    <link rel="stylesheet" href="vendor/codemirror-5.58.1/addon/fold/foldgutter.css">
+    <link rel="stylesheet" href="vendor/codemirror-5.58.1/addon/scroll/simplescrollbars.css">
+    <link rel="stylesheet" href="vendor/codemirror-5.58.1/addon/search/matchesonscrollbar.css">
+    <!-- -->
+    <link rel="stylesheet" href="vendor/codemirror-5.58.1/theme/mbo.css">
+    <link rel="stylesheet" href="vendor/codemirror-5.58.1/theme/neo.css">
+    <link rel="stylesheet" href="vendor/codemirror-5.58.1/theme/ssms.css">
+    <link rel="stylesheet" href="vendor/codemirror-5.58.1/theme/yeti.css">
+    <link rel="stylesheet" href="vendor/codemirror-5.58.1/theme/seti.css">
+    <link rel="stylesheet" href="vendor/codemirror-5.58.1/theme/neat.css">
+    <link rel="stylesheet" href="vendor/codemirror-5.58.1/theme/nord.css">
+    <link rel="stylesheet" href="vendor/codemirror-5.58.1/theme/ttcn.css">
+    <link rel="stylesheet" href="vendor/codemirror-5.58.1/theme/idea.css">
+    <link rel="stylesheet" href="vendor/codemirror-5.58.1/theme/moxer.css">
+    <link rel="stylesheet" href="vendor/codemirror-5.58.1/theme/night.css">
+    <link rel="stylesheet" href="vendor/codemirror-5.58.1/theme/yonce.css">
+    <link rel="stylesheet" href="vendor/codemirror-5.58.1/theme/cobalt.css">
+    <link rel="stylesheet" href="vendor/codemirror-5.58.1/theme/abcdef.css">
+    <link rel="stylesheet" href="vendor/codemirror-5.58.1/theme/bespin.css">
+    <link rel="stylesheet" href="vendor/codemirror-5.58.1/theme/zenburn.css">
+    <link rel="stylesheet" href="vendor/codemirror-5.58.1/theme/elegant.css">
+    <link rel="stylesheet" href="vendor/codemirror-5.58.1/theme/monokai.css">
+    <link rel="stylesheet" href="vendor/codemirror-5.58.1/theme/darcula.css">
+    <link rel="stylesheet" href="vendor/codemirror-5.58.1/theme/isotope.css">
+    <link rel="stylesheet" href="vendor/codemirror-5.58.1/theme/xq-dark.css">
+    <link rel="stylesheet" href="vendor/codemirror-5.58.1/theme/dracula.css">
+    <link rel="stylesheet" href="vendor/codemirror-5.58.1/theme/eclipse.css">
+    <link rel="stylesheet" href="vendor/codemirror-5.58.1/theme/lucario.css">
+    <link rel="stylesheet" href="vendor/codemirror-5.58.1/theme/material.css">
+    <link rel="stylesheet" href="vendor/codemirror-5.58.1/theme/mdn-like.css">
+    <link rel="stylesheet" href="vendor/codemirror-5.58.1/theme/xq-light.css">
+    <link rel="stylesheet" href="vendor/codemirror-5.58.1/theme/icecoder.css">
+    <link rel="stylesheet" href="vendor/codemirror-5.58.1/theme/twilight.css">
+    <link rel="stylesheet" href="vendor/codemirror-5.58.1/theme/3024-day.css">
+    <link rel="stylesheet" href="vendor/codemirror-5.58.1/theme/ambiance.css">
+    <link rel="stylesheet" href="vendor/codemirror-5.58.1/theme/rubyblue.css">
+    <link rel="stylesheet" href="vendor/codemirror-5.58.1/theme/midnight.css">
+    <link rel="stylesheet" href="vendor/codemirror-5.58.1/theme/ayu-dark.css">
+    <link rel="stylesheet" href="vendor/codemirror-5.58.1/theme/liquibyte.css">
+    <link rel="stylesheet" href="vendor/codemirror-5.58.1/theme/solarized.css">
+    <link rel="stylesheet" href="vendor/codemirror-5.58.1/theme/shadowfox.css">
+    <link rel="stylesheet" href="vendor/codemirror-5.58.1/theme/hopscotch.css">
+    <link rel="stylesheet" href="vendor/codemirror-5.58.1/theme/ayu-mirage.css">
+    <link rel="stylesheet" href="vendor/codemirror-5.58.1/theme/3024-night.css">
+    <link rel="stylesheet" href="vendor/codemirror-5.58.1/theme/blackboard.css">
+    <link rel="stylesheet" href="vendor/codemirror-5.58.1/theme/the-matrix.css">
+    <link rel="stylesheet" href="vendor/codemirror-5.58.1/theme/colorforth.css">
+    <link rel="stylesheet" href="vendor/codemirror-5.58.1/theme/railscasts.css">
+    <link rel="stylesheet" href="vendor/codemirror-5.58.1/theme/erlang-dark.css">
+    <link rel="stylesheet" href="vendor/codemirror-5.58.1/theme/vibrant-ink.css">
+    <link rel="stylesheet" href="vendor/codemirror-5.58.1/theme/lesser-dark.css">
+    <link rel="stylesheet" href="vendor/codemirror-5.58.1/theme/base16-dark.css">
+    <link rel="stylesheet" href="vendor/codemirror-5.58.1/theme/oceanic-next.css">
+    <link rel="stylesheet" href="vendor/codemirror-5.58.1/theme/gruvbox-dark.css">
+    <link rel="stylesheet" href="vendor/codemirror-5.58.1/theme/panda-syntax.css">
+    <link rel="stylesheet" href="vendor/codemirror-5.58.1/theme/base16-light.css">
+    <link rel="stylesheet" href="vendor/codemirror-5.58.1/theme/duotone-dark.css">
+    <link rel="stylesheet" href="vendor/codemirror-5.58.1/theme/paraiso-dark.css">
+    <link rel="stylesheet" href="vendor/codemirror-5.58.1/theme/paraiso-light.css">
+    <link rel="stylesheet" href="vendor/codemirror-5.58.1/theme/duotone-light.css">
+    <link rel="stylesheet" href="vendor/codemirror-5.58.1/theme/material-ocean.css">
+    <link rel="stylesheet" href="vendor/codemirror-5.58.1/theme/pastel-on-dark.css">
+    <link rel="stylesheet" href="vendor/codemirror-5.58.1/theme/ambiance-mobile.css">
+    <link rel="stylesheet" href="vendor/codemirror-5.58.1/theme/material-darker.css">
+    <link rel="stylesheet" href="vendor/codemirror-5.58.1/theme/material-palenight.css">
+    <link rel="stylesheet" href="vendor/codemirror-5.58.1/theme/tomorrow-night-bright.css">
+    <link rel="stylesheet" href="vendor/codemirror-5.58.1/theme/tomorrow-night-eighties.css">
+    <!-- -->
+    <link rel="stylesheet" href="vendor/other-third-party-libraries/one-dark-1.1.1.css">
+  </head>
+  <body>
+    <div class="sidebar-left noscrollbar">
+      <div class="toolbar">
+        <div id="reload" title="Reload UI">
+          <svg height="10" width="10" viewBox="0 0 512 512">
+            <path d="M281.525,228.102l104.758-78.042 c12.082-12.085,12.082-24.259,0-36.342L281.525,35.674c-3.274-2.359-7.359-3.725-11.723-3.725c-10.992,0-19.803,8.536-19.803,19.083  v35.429C144.611,86.737,59.205,172.046,59.205,277.258c0,105.396,85.672,190.793,191.248,190.793 c98.03,0,178.809-73.498,189.977-168.169c0.092-0.275,0.367-3.187,0.367-4.455c0-9.992-8.181-18.169-18.261-18.169h-45.793 c-14.993,0-26.349,10.355-27.893,18.986c-8.811,46.156-49.519,80.954-98.397,80.954c-55.329,0-100.127-44.701-100.127-99.94 c0-55.064,44.523-99.667,99.674-99.941v35.437c0,10.541,8.811,19.076,19.803,19.076C274.166,231.83,278.251,230.471,281.525,228.102 z"/>
+          </svg>
+        </div>
+        <div id="refresh" title="Refresh editor">
+          <svg width="10" height="10" viewBox="0 0 128 128">
+            <path d="M18.233,81.666l-0.016,0.003c0.006,0.012,0.01,0.022,0.016,0.036c0.008,0.101,0.026,0.195,0.04,0.293   c0.002,0.017,0,0.029,0.002,0.045l3.929,25.514c0.476,3.098,3.374,5.221,6.47,4.743c3.098-0.476,5.222-3.372,4.746-6.471   l-0.611-3.965c0.712,0.587,1.43,1.169,2.175,1.714c10.106,7.42,23.111,10.987,36.486,8.926c13.372-2.056,24.702-9.37,32.109-19.487   c3.662-4.988,6.353-10.695,7.922-16.793l-15.479-4.262c-1.044,4.191-2.882,8.109-5.405,11.552   c-5.012,6.824-12.566,11.713-21.593,13.105c-9.027,1.388-17.705-1.002-24.536-6.004c-0.841-0.616-1.645-1.282-2.424-1.976   l4.488,0.435c2.872,0.276,5.445-2.025,5.748-5.144c0.3-3.12-1.783-5.873-4.655-6.15l-23.659-2.291   c-2.568-0.248-4.884,1.572-5.564,4.188c-0.05,0.185-0.076,0.374-0.109,0.565c-0.021,0.132-0.061,0.255-0.074,0.39   c-0.004,0.041,0.002,0.077-0.001,0.114c-0.013,0.174-0.004,0.351-0.002,0.528C18.235,81.406,18.224,81.539,18.233,81.666z"/>
+            <path d="M109.767,46.334l0.015-0.002c-0.006-0.013-0.01-0.024-0.016-0.037c-0.008-0.1-0.027-0.195-0.04-0.293   c-0.002-0.015,0-0.029-0.002-0.044l-3.928-25.513c-0.477-3.097-3.373-5.221-6.472-4.744c-3.097,0.477-5.221,3.373-4.744,6.47   l0.612,3.967c-0.715-0.587-1.433-1.169-2.177-1.715c-10.106-7.419-23.112-10.989-36.484-8.926   c-13.374,2.055-24.703,9.371-32.109,19.487c-3.664,4.989-6.355,10.696-7.922,16.794l15.479,4.26   c1.042-4.19,2.882-8.108,5.403-11.551c5.012-6.824,12.569-11.712,21.595-13.105c9.027-1.386,17.703,1.002,24.536,6.002   c0.841,0.618,1.645,1.284,2.423,1.976l-4.487-0.434c-2.872-0.278-5.445,2.026-5.747,5.144c-0.303,3.119,1.782,5.873,4.653,6.15   l23.659,2.291c2.568,0.248,4.884-1.572,5.564-4.188c0.05-0.184,0.076-0.374,0.107-0.565c0.022-0.132,0.063-0.255,0.075-0.391   c0.006-0.038-0.003-0.075,0-0.112c0.014-0.175,0.007-0.353,0.003-0.53C109.764,46.595,109.774,46.462,109.767,46.334z"/>
+          </svg>
+        </div>
+        <div id="reset" title="Reset editor">
+          <svg width="10" height="10" viewBox="0 0 48 48">
+            <path d="M 9.8212753,13.365952 H 34.12766 V 20.455317 L 44.25532,10.327657 34.12766,0.199997 V 7.2893585 H 3.744681 V 22.987232 H 9.8212753 Z"/>
+            <path d="M 38.178723,34.634044 13.872338,34.634037 13.872339,27.544678 3.744681,37.672337 13.872339,47.8 13.87234,40.710639 44.255317,40.710637 44.255318,25.012763 38.178724,25.012764 Z"/>
+          </svg>
+        </div>
+        <div id="support" title="Open support page">
+          <svg height="10" width="10" viewBox="0 0 1792 1792">
+            <path d="M1088 1256v240q0 16-12 28t-28 12h-240q-16 0-28-12t-12-28v-240q0-16 12-28t28-12h240q16 0 28 12t12 28zm316-600q0 54-15.5 101t-35 76.5-55 59.5-57.5 43.5-61 35.5q-41 23-68.5 65t-27.5 67q0 17-12 32.5t-28 15.5h-240q-15 0-25.5-18.5t-10.5-37.5v-45q0-83 65-156.5t143-108.5q59-27 84-56t25-76q0-42-46.5-74t-107.5-32q-65 0-108 29-35 25-107 115-13 16-31 16-12 0-25-8l-164-125q-13-10-15.5-25t5.5-28q160-266 464-266 80 0 161 31t146 83 106 127.5 41 158.5z"/>
+          </svg>
+        </div>
+        <div id="donation" title="Make a donation">
+          <svg height="10" width="10" viewBox="-0.709 -11.555 141.732 141.732">
+            <path d="M140.314,37.654C140.314,16.858,123.402,0,102.537,0c-13.744,0-25.77,7.317-32.379,18.255C63.549,7.317,51.521,0,37.777,0 C16.912,0,0,16.858,0,37.654c0,10.821,4.588,20.57,11.922,27.438h-0.01l54.084,51.584c0.992,1.188,2.48,1.945,4.148,1.945 c1.545,0,2.936-0.653,3.92-1.696l54.346-51.833h-0.016C135.729,58.225,140.314,48.476,140.314,37.654"/>
+          </svg>
+        </div>
+        <div id="version">
+          <svg value='a' width="10" height="10" viewBox="0 0 122.8799 122.8799">
+            <path d="M 120.5812,110.41438 Q 115.37826,112.25071 109.66523,113.37291 103.9522,114.49512 100.68761,114.49512 92.118067,114.49512 87.731276,109.59823 83.344486,104.59933 81.610173,91.847033 78.957695,96.233824 75.080996,100.92667 71.306315,105.5175 67.123561,108.37401 62.328696,111.74062 57.431814,113.47493 52.534931,115.31126 45.59768,115.31126 37.130153,115.31126 29.274737,111.53658 21.521339,107.7619 15.502254,100.72263 9.4831686,93.683364 6.0145432,83.78758 2.5459178,73.891795 2.5459178,61.955643 2.5459178,51.039675 6.21858,41.245909 9.8912421,31.452144 16.522438,24.004801 22.847578,16.965532 31.519142,12.986814 40.292723,9.0080971 49.678416,9.0080971 61.818604,9.0080971 70.286131,14.925164 78.753658,20.740212 82.732375,31.248107 L 85.282835,11.762594 H 104.25826 Q 103.54413,19.0059 101.09569,33.390493 98.749263,47.775087 95.586693,64.812158 95.892748,79.808862 98.9533,89.908683 102.11587,99.906486 107.01275,102.763 108.54303,103.68117 112.8278,103.78318 117.11257,103.8852 120.5812,103.8852 Z M 79.671823,58.99711 Q 78.957695,51.549767 77.3254,43.898388 75.693106,36.247008 72.428517,30.329941 69.265947,24.310856 64.165028,20.638194 59.166126,16.863513 51.718784,16.863513 39.680613,16.863513 31.723178,29.207739 23.867762,41.551965 23.867762,63.179864 23.867762,71.443354 25.602075,78.890697 27.336387,86.236021 30.498958,91.642996 33.865565,97.356026 39.272539,100.92667 44.781533,104.3953 52.330894,104.3953 64.777138,104.3953 71.714389,93.27529 78.651639,82.053267 79.671823,58.99711 Z"/>
+          </svg>
+          <svg value='b' width="10" height="10" viewBox="0 0 122.8799 122.8799">
+            <path d="M 84.460659,54.051815 C 87.375259,56.688831 89.572773,59.88101 91.053203,63.62835 92.579898,67.329427 93.343244,71.423745 93.343244,75.911298 93.343244,85.765416 90.243593,94.069711 84.044288,100.82417 77.891249,107.57863 70.049591,110.95586 60.519316,110.95586 56.494397,110.95586 53.094032,110.47009 50.318224,109.49857 47.58868,108.52703 45.414298,107.46297 43.795078,106.30639 H 43.239915 V 121.66262 H 30.263015 V 39.617612 C 30.263015,32.678095 30.771913,27.172741 31.789708,23.101557 32.853768,19.030373 35.328863,14.936056 39.214993,10.818607 41.759484,8.0890639 44.974796,5.8915492 48.860925,4.2260644 52.747057,2.56058 57.118954,1.7278375 61.976617,1.7278375 65.585168,1.7278375 69.008664,2.1673407 72.247105,3.0463463 75.485547,3.925352 78.377016,5.3132562 80.921505,7.2100577 83.465995,9.0605967 85.455323,11.396902 86.889491,14.218972 88.323658,16.994781 89.040743,20.395144 89.040743,24.420066 89.040743,28.121143 88.346792,31.336453 86.958888,34.065998 85.570983,36.795543 83.882366,38.993057 81.893037,40.658541 79.949973,42.370288 77.752457,43.735062 75.300494,44.752856 72.848532,45.770654 70.627885,46.39521 68.638557,46.626527 L 68.916138,47.251085 C 71.044255,47.389874 73.565615,48.037564 76.480212,49.194149 79.441074,50.304473 82.101223,51.923694 84.460659,54.051815 Z M 78.839649,76.188879 C 78.839649,72.950437 78.562068,69.688863 78.006907,66.404158 77.49801,63.119453 76.595872,60.389908 75.300494,58.215525 73.912591,55.948616 72.015788,54.167473 69.610089,52.872095 67.250653,51.576719 64.197264,50.92903 60.449924,50.92903 H 53.926775 V 44.336487 H 58.645647 C 60.68124,44.336487 62.786227,43.989511 64.960609,43.29556 67.181256,42.555343 69.078058,41.44502 70.651016,39.964589 72.45529,38.299105 73.866328,36.332908 74.884123,34.065998 75.901919,31.799088 76.410818,28.745699 76.410818,24.905832 76.410818,19.169163 75.022914,14.751002 72.247105,11.65135 69.471298,8.5516981 65.839615,7.0018721 61.35206,7.0018721 58.668781,7.0018721 56.286213,7.4413752 54.204354,8.3203814 52.168763,9.1993867 50.271961,10.818609 48.51395,13.178046 46.894727,15.352427 45.599352,18.359553 44.627819,22.199421 43.70255,26.039288 43.239915,30.573108 43.239915,35.800879 V 94.786794 C 44.211448,97.747657 46.177644,100.3384 49.138506,102.55905 52.099368,104.7797 55.499733,105.89001 59.339598,105.89001 65.261324,105.89001 69.980195,103.253 73.496219,97.978969 77.058505,92.658673 78.839649,85.395309 78.839649,76.188879 Z"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+    <div class="open-left"></div>
+    <div class="container"><div class="tabs"></div></div>
+    <div class="open-right" state="close"></div>
+    <div class="sidebar-right noscrollbar" state="close"></div>
+    <div class="info"></div>
+    <!-- -->
+    <script type="text/javascript" src="vendor/sortable-1.10.2/sortable.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/lib/codemirror.js"></script>
+    <!-- -->
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/keymap/vim.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/keymap/emacs.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/keymap/sublime.js"></script>
+    <!-- -->
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/addon/dialog/dialog.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/addon/display/rulers.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/addon/scroll/simplescrollbars.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/addon/scroll/annotatescrollbar.js"></script>
+    <!-- -->
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/addon/edit/closetag.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/addon/edit/matchtags.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/addon/edit/closebrackets.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/addon/edit/trailingspace.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/addon/edit/matchbrackets.js"></script>
+    <!-- -->
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/addon/hint/sql-hint.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/addon/hint/css-hint.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/addon/hint/xml-hint.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/addon/hint/html-hint.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/addon/hint/show-hint.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/addon/hint/anyword-hint.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/addon/hint/javascript-hint.js"></script>
+    <!-- -->
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/addon/fold/xml-fold.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/addon/fold/foldcode.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/addon/fold/foldgutter.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/addon/fold/brace-fold.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/addon/fold/indent-fold.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/addon/fold/comment-fold.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/addon/fold/markdown-fold.js"></script>
+    <!-- -->
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/addon/lint/lint.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/addon/lint/css-lint.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/addon/lint/html-lint.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/addon/lint/yaml-lint.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/addon/lint/json-lint.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/addon/lint/javascript-lint.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/addon/lint/coffeescript-lint.js"></script>
+    <!-- -->
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/addon/search/search.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/addon/search/jump-to-line.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/addon/search/searchcursor.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/addon/search/match-highlighter.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/addon/search/matchesonscrollbar.js"></script>
+    <!-- -->
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/r/r.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/q/q.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/d/d.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/meta.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/oz/oz.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/go/go.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/vb/vb.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/sql/sql.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/pug/pug.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/z80/z80.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/xml/xml.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/vue/vue.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/pig/pig.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/php/php.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/gfm/gfm.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/gas/gas.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/fcl/fcl.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/elm/elm.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/ecl/ecl.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/dtd/dtd.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/css/css.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/soy/soy.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/rst/rst.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/rpm/rpm.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/sas/sas.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/apl/apl.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/lua/lua.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/jsx/jsx.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/idl/idl.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/tcl/tcl.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/toml/toml.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/stex/stex.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/solr/solr.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/sass/sass.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/ruby/ruby.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/slim/slim.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/mirc/mirc.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/mbox/mbox.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/vhdl/vhdl.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/yaml/yaml.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/ttcn/ttcn.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/twig/twig.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/haml/haml.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/ebnf/ebnf.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/diff/diff.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/dart/dart.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/http/http.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/haxe/haxe.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/perl/perl.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/swift/swift.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/nginx/nginx.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/mumps/mumps.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/forth/forth.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/dylan/dylan.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/cobol/cobol.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/cmake/cmake.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/asn.1/asn.1.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/julia/julia.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/clike/clike.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/sieve/sieve.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/shell/shell.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/pegjs/pegjs.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/yacas/yacas.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/troff/troff.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/turtle/turtle.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/xquery/xquery.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/webidl/webidl.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/python/python.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/puppet/puppet.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/sparql/sparql.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/scheme/scheme.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/smarty/smarty.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/pascal/pascal.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/mscgen/mscgen.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/mllike/mllike.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/stylus/stylus.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/groovy/groovy.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/erlang/erlang.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/eiffel/eiffel.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/django/django.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/jinja2/jinja2.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/cypher/cypher.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/octave/octave.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/textile/textile.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/tornado/tornado.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/haskell/haskell.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/fortran/fortran.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/crystal/crystal.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/clojure/clojure.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/gherkin/gherkin.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/verilog/verilog.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/velocity/velocity.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/vbscript/vbscript.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/ttcn-cfg/ttcn-cfg.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/modelica/modelica.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/asterisk/asterisk.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/ntriples/ntriples.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/markdown/markdown.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/protobuf/protobuf.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/smalltalk/smalltalk.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/htmlmixed/htmlmixed.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/brainfuck/brainfuck.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/commonlisp/commonlisp.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/properties/properties.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/powershell/powershell.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/asciiarmor/asciiarmor.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/livescript/livescript.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/javascript/javascript.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/spreadsheet/spreadsheet.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/mathematica/mathematica.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/coffeescript/coffeescript.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/yaml-frontmatter/yaml-frontmatter.js"></script>
+    <script type="text/javascript" src="vendor/codemirror-5.58.1/mode/haskell-literate/haskell-literate.js"></script>
+    <!-- -->
+    <script type="text/javascript" src="vendor/other-third-party-libraries/jsonlint.js"></script>
+    <script type="text/javascript" src="vendor/other-third-party-libraries/searchbox.js"></script>
+    <script type="text/javascript" src="vendor/other-third-party-libraries/jshint-2.12.0.js"></script>
+    <script type="text/javascript" src="vendor/other-third-party-libraries/csslint-1.0.5.js"></script>
+    <script type="text/javascript" src="vendor/other-third-party-libraries/show-invisibles.js"></script>
+    <!-- -->
+    <script type="text/javascript" src="resource/config.js"></script>
+    <script type="text/javascript" src="resource/editor.js"></script>
+    <script type="text/javascript" src="resource/options.js"></script>
+    <script type="text/javascript" src="resource/sidebar.js"></script>
+    <script type="text/javascript" src="resource/listeners.js"></script>
+    <script type="text/javascript" src="resource/fileio.js"></script>
+    <!-- -->
+    <script type="text/javascript" src="index.js"></script>
+  </body>
+</html>
