@@ -578,3 +578,7 @@ div[class*="open-"] {transition: 500ms ease opacity}
     font-family: monaco, "andale mono", "lucida console", "courier new", monospace;
   }
 }
+
+html[context="webapp"] .ext {
+  display: none;
+}
