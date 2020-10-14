@@ -136,7 +136,12 @@ config.editor = {
       window.setTimeout(function () {
         var path = config.storage.object.active;
         var table = document.getElementById("sidebar-table-for-item-" + path);
-        if (table) table.scrollIntoView({"behavior": "smooth"});
+        if (table) {
+          var context = document.documentElement.getAttribute("context");
+          if (context !== "webapp") {
+            table.scrollIntoView({"behavior": "smooth"});
+          }
+        }
       }, 300);
       /*  */
 			window.setTimeout(function () {
