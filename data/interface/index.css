@@ -468,6 +468,7 @@ div[class*="open-"] {transition: 500ms ease opacity}
 .toolbar {
   left: 0;
   bottom: 0;
+  width: 100%;
   margin: 0 auto;
   position: absolute;
   z-index: 2147483647;
@@ -475,13 +476,13 @@ div[class*="open-"] {transition: 500ms ease opacity}
 
 .toolbar div {
   margin: 0;
-  width: 32px;
+  width: 28px;
 	height: 32px;
 	cursor: pointer;
 	user-select: none;
 	line-height: 32px;
 	text-align: center;
-  display: table-cell;
+  display: inline-block;
   transition: 300ms ease background-color;
 }
 
@@ -496,8 +497,9 @@ div[class*="open-"] {transition: 500ms ease opacity}
 }
 
 #version {
-  width: 16px;
+  float: right;
   cursor: default;
+  border-left: solid 1px rgba(125, 125, 125, 0.05);
 }
 
 #version[value='a'] svg[value='a'] {display: inline}
