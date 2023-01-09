@@ -1,15 +1,19 @@
 {
-  "version": "0.1.7",
-  "manifest_version": 2,
+  "version": "0.1.9",
   "name": "Text Editor",
+  "manifest_version": 3,
   "offline_enabled": true,
   "permissions": ["storage"],
-  "short_name": "text-editor",
   "optional_permissions": ["downloads"],
-  "background": {"scripts": ["lib/background.js"]},
   "homepage_url": "https://mybrowseraddon.com/text-editor.html",
   "description": "A free, highly customizable text and code editor extension for your browser.",
-  "browser_action": {
+  "commands": {
+    "_execute_action": {}
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
     "default_title": "Text Editor",
     "default_icon": {
       "16": "data/icons/16.png",

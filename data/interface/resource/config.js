@@ -1,15 +1,24 @@
 var config = {
   "count": 0,
   "files": {},
+  "editor": {},
+  "options": {},
   "directories": {},
-  "current": {"path": null},
-  "custom": {"style": null},
-  "download": {"id": '', "url": '', "saveAs": false},
-  "support": {"fileio": {"new": false, "old": false}},
+  "current": {
+    "path": null
+  },
+  "custom": {
+    "style": null
+  },
   "addon": {
     "homepage": function () {
       return chrome.runtime.getManifest().homepage_url;
     }
+  },
+  "download": {
+    "id": '', 
+    "url": '', 
+    "saveAs": false
   },
   "elements": {
     "toggle": {},
@@ -20,58 +29,40 @@ var config = {
       }
     }
   },
-  "make": {
-    "random": {
-      "name": function makeid() {
-        var text = '', possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-        for (var i = 0; i < 7; i++) text += possible.charAt(Math.floor(Math.random() * possible.length));
-        return text;
-      }
-    }
-  },
   "reset": function () {
-    var result = window.confirm("Do you really want to restore the app to factory settings?");
+    let result = window.confirm("Do you really want to restore the app to factory settings?");
     if (result) {
       chrome.storage.local.clear(function () {
-        document.getElementById("reloadApp").click();
+        document.getElementById("reload").click();
       });
     }
   },
   "sort": {
     "array": function (e) {return e.sort()},
     "object": function (e) {
-      var keys = Object.keys(e);
+      let keys = Object.keys(e);
       return keys.sort().reduce((a, v) => {
         a[v] = e[v];
         return a;
       }, {});
     }
   },
-  "storage": {
-    "object": {},
-    "defaults": {
-      "tabs": {},
-      "files": {},
-			"cursor": {},
-      "sorted": [],
-      "active": null,
-      "directories": {},
-      "open-left": "open",
-      "open-right": "close",
-      "sidebar-left": "open",
-      "sidebar-right": "close"
-    },
-    "read": function (id) {return config.storage.object[id]},
-    "write": function (id, data) {
-      var tmp = {};
-      tmp[id] = data;
-      config.storage.object[id] = data;
-      chrome.storage.local.set(tmp, function () {});
+  "make": {
+    "random": {
+      "name": function makeid() {
+        let text = '';
+        let possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        for (let i = 0; i < 7; i++) {
+          text += possible.charAt(Math.floor(Math.random() * possible.length));
+        }
+        /*  */
+        return text;
+      }
     }
   },
   "color": {
     "check": function (color) {
-      var r, g, b, hsp;
+      let r, g, b, hsp;
       if (color.match(/^rgb/)) {
         color = color.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*(\d+(?:\.\d+)?))?\)$/);
         r = color[1];
@@ -88,111 +79,171 @@ var config = {
       return hsp > 127.5 ? "light" : "dark";
     }
   },
-  "check": {
-    "file": {
-      "picker": function () {
-        var a = window.showOpenFilePicker;
-        var b = window.showSaveFilePicker;
-        return a !== undefined && b !== undefined;
-      }
-    },
-    "permission": {
-      "downloads": function () {
-        return new Promise(resolve => {
-          try {
-            chrome.permissions.contains({"permissions": ["downloads"]}, function (granted) {
-              if (granted) resolve(granted);
-              else {
-                var p = document.createElement("p");
-                var div = document.createElement("div");
-                var span = document.createElement("span");
-                var modal = document.createElement("div");
-                /*  */
-                span.textContent = "OK";
-                p.textContent = "Text Editor extension needs - downloads - permission to be able to read and write text files to disk (in the default download folder). You can change the download folder path via the settings tab in your browser.";
-                modal.setAttribute("class", "modal");
-                div.setAttribute("class", "modal-window");
-                span.addEventListener("click", function () {
-                  modal.style.display = "none";
-                  /*  */
-                  try {
-                    chrome.permissions.request({"permissions": ["downloads"]}, function (granted) {
-                      resolve(granted);
-                    });
-                  } catch (e) {}
-                });
-                /*  */
-                modal.appendChild(div);
-                div.appendChild(p);
-                div.appendChild(span);
-                document.body.appendChild(modal);
-              }
-            });
-          } catch (e) {
-            resolve(false);
-          }
-        });
+  "resize": {
+    "timeout": null,
+    "method": function () {
+      if (config.port.name === "win") {
+        if (config.resize.timeout) window.clearTimeout(config.resize.timeout);
+        config.resize.timeout = window.setTimeout(async function () {
+          let current = await chrome.windows.getCurrent();
+          /*  */
+          config.storage.write("interface.size", {
+            "top": current.top,
+            "left": current.left,
+            "width": current.width,
+            "height": current.height
+          });
+        }, 1000);
       }
     }
   },
-  "excluded": {
-    "intelliSense": {
-      "trigger": {
-        "keys": {
-          "8": "backspace",
-          "9": "tab",
-          "13": "enter",
-          "16": "shift",
-          "17": "ctrl",
-          "18": "alt",
-          "19": "pause",
-          "20": "capslock",
-          "27": "escape",
-          "33": "pageup",
-          "34": "pagedown",
-          "35": "end",
-          "36": "home",
-          "37": "left",
-          "38": "up",
-          "39": "right",
-          "40": "down",
-          "45": "insert",
-          "46": "delete",
-          "67": "c",
-          "83": "s",
-          "86": "v",
-          "90": "z",
-          "91": "left window key",
-          "92": "right window key",
-          "93": "select",
-          "107": "add",
-          "109": "subtract",
-          "110": "decimal point",
-          "111": "divide",
-          "112": "f1",
-          "113": "f2",
-          "114": "f3",
-          "115": "f4",
-          "116": "f5",
-          "117": "f6",
-          "118": "f7",
-          "119": "f8",
-          "120": "f9",
-          "121": "f10",
-          "122": "f11",
-          "123": "f12",
-          "144": "numlock",
-          "145": "scrolllock",
-          "186": "semicolon",
-          "187": "equalsign",
-          "188": "comma",
-          "189": "dash",
-          "191": "slash",
-          "192": "graveaccent",
-          "220": "backslash",
-          "222": "quote"
+  "port": {
+    "name": '',
+    "connect": function () {
+      config.port.name = "webapp";
+      let context = document.documentElement.getAttribute("context");
+      /*  */
+      if (chrome.runtime) {
+        if (chrome.runtime.connect) {
+          if (context !== config.port.name) {
+            if (document.location.search === "?win") config.port.name = "win";
+            background.connect(chrome.runtime.connect({"name": config.port.name}));
+          }
+        }
+      }
+      /*  */
+      document.documentElement.setAttribute("context", config.port.name);
+    }
+  },
+  "storage": {
+    "local": {},
+    "defaults": {
+      "tabs": {},
+      "files": {},
+      "cmv": "v5",
+			"cursor": {},
+      "sorted": [],
+      "active": null,
+      "directories": {},
+      "open-left": "open",
+      "open-right": "close",
+      "sidebar-left": "open",
+      "sidebar-right": "close"
+    },
+    "read": function (id) {
+      return config.storage.local[id];
+    },
+    "load": function (callback) {
+      chrome.storage.local.get(null, function (e) {
+        config.storage.local = e;
+        callback();
+      });
+    },
+    "write": function (id, data) {
+      if (id) {
+        if (data !== '' && data !== null && data !== undefined) {
+          let tmp = {};
+          tmp[id] = data;
+          config.storage.local[id] = data;
+          chrome.storage.local.set(tmp);
+        } else {
+          delete config.storage.local[id];
+          chrome.storage.local.remove(id);
         }
       }
     }
+  },
+  "app": {
+    "start": async function () {
+      for (let id in config.storage.defaults) {
+        let valid = config.storage.local[id] !== undefined;
+        config.storage.local[id] = valid ? config.storage.local[id] : config.storage.defaults[id];
+      }
+      /*  */
+      config.elements.toggle.left.setAttribute("state", config.storage.local["open-left"]);
+      config.elements.toggle.right.setAttribute("state", config.storage.local["open-right"]);
+      config.elements.sidebar.left.setAttribute("state", config.storage.local["sidebar-left"]);
+      config.elements.sidebar.right.setAttribute("state", config.storage.local["sidebar-right"]);
+      /*  */
+      await config.fileio.init();
+      await config.sidebar.render();
+      /*  */
+      config.listeners.update.info();
+      config.listeners.action("left", false);
+      config.listeners.action("right", false);
+      /*  */
+      if (config.support.fileio.old) {
+        let openFolder = document.getElementById("openFolder");
+        let container = document.querySelector('div[class*="sidebar"] .files-container')
+        /*  */
+        if (container) container.style.height = "calc(100% - 198px)";
+        if (openFolder) openFolder.closest("tr").style.display = "none";
+      }
+      /*  */
+      new Sortable(config.elements.tabs, {
+        "delay": 0, 
+        "scroll": true, 
+        "animation": 300, 
+        "scrollSpeed": 100, 
+        "bubbleScroll": true, 
+        "onEnd": config.sorted,
+        "scrollSensitivity": 30
+      });
+      /*  */
+      window.setTimeout(function () {
+        document.getElementById("new").click();
+      }, 300);
+    }
+  },
+  "load": function () {
+    const reset = document.getElementById("reset");
+    const reload = document.getElementById("reload");
+    const refresh = document.getElementById("refresh");
+    const support = document.getElementById("support");
+    const donation = document.getElementById("donation");
+    /*  */
+    reset.addEventListener("click", function () {
+      config.reset();
+    });
+    /*  */
+    refresh.addEventListener("click", function () {
+      const active = config.editor[config.storage.local["cmv"]].codemirror[config.current.path];
+      if (active) active.refresh();
+    });
+    /*  */
+    support.addEventListener("click", function () {
+      const url = config.addon.homepage();
+      chrome.tabs.create({"url": url, "active": true});
+    }, false);
+    /*  */
+    donation.addEventListener("click", function () {
+      const url = config.addon.homepage() + "?reason=support";
+      chrome.tabs.create({"url": url, "active": true});
+    }, false);
+    /*  */
+    reload.addEventListener("click", function () {
+      if (config.listeners.changed.check.all()) {
+        return window.confirm("There are some unsaved changes! Please save all files before reloading the app.");
+      } else {}
+      //
+      document.location.reload();
+    });
+    /*  */
+    config.custom.style = document.createElement("style");
+    config.elements.tabs = document.querySelector(".tabs");
+    config.elements.container = document.querySelector(".container");
+    config.elements.toggle.left = document.querySelector(".open-left");
+    config.elements.toggle.right = document.querySelector(".open-right");
+    config.elements.sidebar.left = document.querySelector(".sidebar-left");
+    config.elements.sidebar.right = document.querySelector(".sidebar-right");
+    /*  */
+    config.custom.style.textContent = '';
+    document.documentElement.appendChild(config.custom.style);
+    chrome.storage.onChanged.addListener(function (e) {if ("tabs" in e) config.sorted()});
+    config.elements.toggle.left.addEventListener("click", function () {config.listeners.action("left", true)});
+    config.elements.toggle.right.addEventListener("click", function () {config.listeners.action("right", true)});
+    /*  */
+    config.storage.load(config.app.start);
+    window.removeEventListener("load", config.load, false);
   }
 };
