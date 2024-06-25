@@ -22,7 +22,7 @@ body {
 }
 
 body, table tr td {
-	font-size: 12px;
+	font-size: 13px;
 	font-family: monospace;
 }
 
@@ -54,7 +54,7 @@ table tr td[rule='close'] {
   width: 28px;
   min-width: 28px;
   max-width: 28px;
-  font-size: 10px;
+  font-size: 11px;
   text-align: center;
   background-color: transparent;
 }
@@ -69,7 +69,7 @@ table tr td div {
 }
 
 .tabs tr td div {
-  font-size: 12px;
+  font-size: 13px;
   overflow: hidden;
   white-space: nowrap;
   font-family: monospace;
@@ -149,7 +149,7 @@ div[class*='sidebar'] input[type='number'] {
 	width: 128px;
 	height: 38px;
 	outline: none;
-  font-size: 12px;
+  font-size: 13px;
 	overflow: hidden;
 	text-align: left;
 	margin: 0 5px 0 0;
@@ -202,7 +202,7 @@ div[class*='sidebar'] label {
 div[class*='sidebar'] .checkbox {
 	padding: 0;
 	width: 38px;
-	font-size: 12px;
+	font-size: 13px;
 	line-height: 38px;
 	text-align: center;
 	display: inline-block;
@@ -240,7 +240,7 @@ table[id*='-for-item'] {border-left: solid 2px transparent}
 table[id*='-for-item'][active] {border-left: solid 2px #5188e6}
 
 table[id*='-for-item'] tr td[rule='button'] div {
-  font-size: 12px;
+  font-size: 13px;
   overflow: hidden;
   white-space: nowrap;
   font-family: monospace;
@@ -251,7 +251,7 @@ table div[for]:before {
   opacity: 0.9;
   content: '✖';
   color: #939393;
-  font-size: 10px;
+  font-size: 11px;
 	line-height: 28px;
 }
 
@@ -314,7 +314,7 @@ div[class*='open-'] {transition: 500ms ease opacity}
 
 .tabs table {
   padding: 0;
-  color: #FFF;
+  color: #fff;
   height: 38px;
   cursor: pointer;
   border-spacing: 0;
@@ -415,7 +415,7 @@ div[class*='open-'] {transition: 500ms ease opacity}
 .sidebar-left details summary {
   padding: 0;
   height: 28px;
-  font-size: 12px;
+  font-size: 13px;
   line-height: 28px;
   user-select: none;
   font-family: monospace;
@@ -472,7 +472,7 @@ div[class*='open-'] {transition: 500ms ease opacity}
 }
 
 .ace_button {
-  font-size: 12px;
+  font-size: 13px;
   display: inline-block;
   font-family: monospace;
 	padding: 7px 20px !important;
@@ -572,7 +572,7 @@ div[class*='open-'] {transition: 500ms ease opacity}
   padding: 0;
   color: #555;
   outline: none;
-  font-size: 12px;
+  font-size: 13px;
   margin: 10px auto;
   line-height: 20px;
   text-align: justify;
@@ -588,7 +588,7 @@ div[class*='open-'] {transition: 500ms ease opacity}
   outline: none;
   display: block;
   cursor: pointer;
-  font-size: 12px;
+  font-size: 13px;
   line-height: 38px;
   text-align: center;
   background-color: #26292f;
