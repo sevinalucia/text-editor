@@ -1,6 +1,6 @@
 This app uses the following open-source projects:
 
-codemirror >> * (v5.65.11): https://codemirror.net/codemirror.zip
+codemirror >> * (v5.65.16): https://codemirror.net/codemirror.zip
 sortable >> sortable.js (v1.15.0): https://github.com/SortableJS/sortablejs/archive/1.15.0.zip >> sortable.js
 
 other >> jshint.js (v2.13.6): https://github.com/jshint/jshint/blob/master/dist/jshint.js
