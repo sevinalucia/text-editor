@@ -274,8 +274,8 @@ table div[for]:hover:before {
 	z-index: 10;
   height: 100%;
   margin: 0 -29px;
-  background: url('../icons/256.png') no-repeat center center;
-  background-size: 128px;
+  background: url('../icons/logo.png') no-repeat center center;
+  background-size: 148px;
 }
 
 .CodeMirror {
