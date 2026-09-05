@@ -1,0 +1,13 @@
+{
+  "name": "codemirror6-vendor-build",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Reproducible build of the CodeMirror 6 vendor bundle (codemirror.js) for the Text Editor extension",
+  "dependencies": {
+    "@codemirror/language-data": "6.5.2",
+    "codemirror": "6.0.2"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2"
+  }
+}

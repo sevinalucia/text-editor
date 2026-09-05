@@ -17,19 +17,6 @@ var background = {
       });
     }
   },
-  "send": function (id, data) {
-    if (id) {
-      if (context !== "webapp") {
-        chrome.runtime.sendMessage({
-          "method": id,
-          "data": data,
-          "path": "interface-to-background"
-        }, function () {
-          return chrome.runtime.lastError;
-        });
-      }
-    }
-  },
   "post": function (id, data) {
     if (id) {
       if (background.port) {
@@ -38,6 +25,20 @@ var background = {
           "data": data,
           "port": background.port.name,
           "path": "interface-to-background"
+        });
+      }
+    }
+  },
+  "send": function (id, data) {
+    if (id) {
+      let context = document.documentElement.getAttribute("context");
+      if (context !== "webapp") {
+        chrome.runtime.sendMessage({
+          "method": id,
+          "data": data,
+          "path": "interface-to-background"
+        }, function () {
+          return chrome.runtime.lastError;
         });
       }
     }

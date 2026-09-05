@@ -1,6 +1,125 @@
-This app uses the following open-source projects:
+====================================================================
+ VENDOR README - THIRD-PARTY CODE IN THIS EXTENSION
+====================================================================
 
-codemirror >> * (v5.65.21): https://codemirror.net/codemirror.zip
+This app is fully offline: every runtime asset is vendored in this
+directory tree. No CDN, no remote fonts, no network calls at runtime.
+
+--------------------------------------------------------------------
+ 1. CODEMIRROR 5  >>  codemirror/v5/          (one file per component)
+--------------------------------------------------------------------
+
+codemirror v5.65.21: https://codemirror.net/codemirror.zip
+  lib,
+  mode/*,
+  addon/*,
+  theme/*,
+  keymap/*
+  
+  all loaded statically by data/interface/index.html script/link tags.
+
+--------------------------------------------------------------------
+ 2. CODEMIRROR 6  >>  codemirror/v6/          (single reproducible bundle)
+--------------------------------------------------------------------
+
+Shipped file : codemirror/v6/codemirror.js  (~1.6 MB, minified IIFE)
+Exposes      : exactly one global, window.CodeMirror6
+Built from   : official npm packages, version-pinned (see section 2.3)
+
+ 2.1 WHY A SINGLE BUNDLE (AND NOT ONE FILE PER MODE LIKE V5)?
+  CodeMirror 6 does not exist as standalone per-mode / per-addon files.
+  The official distribution is a set of ES-modules published on npm
+  ("codemirror" + "@codemirror/state", "@codemirror/view",
+  "@codemirror/language", "@codemirror/search",
+  "@codemirror/autocomplete", "@codemirror/lint",
+  "@codemirror/language-data" and the "@lezer/*" parser packages).
+
+These modules import each other by package name, which browsers cannot
+resolve without a bundler. Bundling into one IIFE file is the standard,
+documented way to vendor CM6 in an extension. All 143 language packages
+are embedded inside the bundle (nothing is fetched at runtime).
+
+ 2.2 WHERE THE CODE COMES FROM
+  - Consumed from : the official npm registry (registry.npmjs.org),
+    version-pinned in codemirror/v6/src/package.json and fully locked in
+    codemirror/v6/src/package-lock.json.
+  - Source code   : https://code.haverbeke.berlin/codemirror (official
+    repositories maintained by the CodeMirror author), with read-only
+    mirrors on GitHub (github.com/codemirror). The npm tarballs and the
+    repositories have identical contents for a given version.
+
+ 2.3 DIRECT DEPENDENCIES (exact versions)
+  codemirror ................ 6.0.2     (meta package: basicSetup)
+  @codemirror/language-data . 6.5.2   (143 languages incl. legacy modes)
+  esbuild ................... 0.28.2   (build tool only, never shipped)
+  The COMPLETE transitive tree with exact versions is in
+  codemirror/v6/src/dependency-tree.txt
+  and cryptographically locked in codemirror/v6/src/package-lock.json.
+
+ 2.4 HOW TO REBUILD - DETERMINISTIC, BYTE FOR BYTE
+  cd codemirror/v6/src
+  npm ci               <- installs EXACTLY the locked versions
+  node build.mjs       <- bundles + ascii-escapes + writes ../codemirror.js
+  The script prints a SHA-256. It must be EXACTLY:
+
+  C359D214835EA300D0BB857DBB4B54F5CBB3E5EE7790A7D7A677C96950C0A281
+
+  If your rebuild hash matches, the shipped file provably contains
+  nothing but the pinned public packages plus the small entry source.
+
+ 2.5 WHAT GOES INTO THE BUNDLE
+  - src/entry.js (~150 lines, human-readable): imports the public CM6
+    packages and assigns them to window.CodeMirror6. Nothing else.
+  - src/build.mjs (build script): esbuild bundle (IIFE, minified,
+    target es2020) followed by an ASCII-normalization pass.
+  - ASCII pass: legacy language packs contain raw non-ASCII regex
+    literals (e.g. APL glyphs). Raw UTF-8 breaks when a browser decodes
+    the file with the wrong charset, so every character >= U+0080 is
+    replaced with its \uXXXX escape - semantically byte-identical.
+  - Build notes: do NOT use esbuild's --global-name flag; entry.js
+    assigns the global itself (a global-name wrapper would clobber it
+    with undefined in browsers).
+
+ 2.6 RUNTIME SAFETY AUDIT (already performed on the shipped file)
+  - zero fetch / XMLHttpRequest / WebSocket / Worker calls
+  - zero dynamic import() - every language is embedded in the file
+  - the only "http" strings are inert: XML namespaces inside inline
+    SVG data-URIs and the "https://" autolink prefix constant
+  - no eval / no new Function at import time
+  - exactly one global added: window.CodeMirror6
+
+ 2.7 FULL-PACKAGE OFFLINE AUDIT (all 449 shipped files scanned)
+  - 1163 "http(s)://" string occurrences found; every one of them is
+    inert: license headers in vendored files, documentation links in
+    comments, or fixture text inside upstream demo/test pages
+  - v5 mode folders also contain upstream demo pages (mode/*/index.html)
+    and test fixtures (test.js) with sample URLs - these files are NOT
+    referenced by index.html or the engine manifest and never load
+  - the only script/link injections (resource/config.js engine loader)
+    target local extension paths exclusively
+  - the service worker (background.js) imports local lib/*.js only
+  - binaries: local PNG/GIF icons only
+  - conclusion: the package performs zero network activity
+
+--------------------------------------------------------------------
+ 3. ENGINE SWITCHING
+--------------------------------------------------------------------
+
+The active editor version is stored in storage.local "cmv" ("v5" | "v6").
+BOTH engines load dynamically through the manifest in resource/config.js
+(config.engine.manifest): only the active engine's files are ever loaded.
+- v5: 72 CSS + 159 JS files (lib, addons, keymaps, modes, lint backends)
+- v6: the single bundle + resource/v6/editor.js + resource/v6/options.js
+Engine scripts are injected in manifest order with async=false (ordered
+execution), each verified against its expected global where applicable.
+The selector is the "API Version" row in the settings sidebar; switching
+persists "cmv" and reloads the interface. index.html only carries the
+engine-independent core (styles, Sortable, resource/*.js).
+
+--------------------------------------------------------------------
+ 4. OTHER LIBRARIES
+--------------------------------------------------------------------
+
 sortable >> sortable.js (v1.15.7): https://github.com/SortableJS/sortablejs/archive/1.15.7.zip >> sortable.js
 
 other >> jshint.js (v2.13.6): https://github.com/jshint/jshint/blob/master/dist/jshint.js
@@ -9,3 +128,9 @@ other >> jsonlint.js (v1.6.0): https://github.com/zaach/jsonlint/archive/refs/ta
 other >> one-dark.css (v1.1.1): https://github.com/Aerobird98/codemirror-one-dark-theme/blob/master/one-dark.css
 other >> searchbox.js (v1.0.8): https://github.com/coderaiser/cm-searchbox/archive/refs/tags/v1.0.8.zip >> searchbox.js
 other >> show-invisibles.js (v3.1.0): https://github.com/coderaiser/cm-show-invisibles/archive/refs/tags/v3.1.0.zip >> show-invisibles.js
+
+Note: converted remote resources in codemirror/v5/mode/slim/index.html to local copies:
+
+jquery-ui.css: codemirror/v5/mode/slim/jquery-ui.css
+jquery-ui.min.js: codemirror/v5/mode/slim/jquery-ui.min.js
+jquery-1.11.1.min.js: codemirror/v5/mode/slim/jquery-1.11.1.min.js

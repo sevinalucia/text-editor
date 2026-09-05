@@ -1,4 +1,4 @@
-config.editor.v5 = {
+﻿config.editor.v5 = {
   "UI": {},
   "textarea": {},
   "codemirror": {},
@@ -11,16 +11,21 @@ config.editor.v5 = {
   },
   "focus": {
     "codemirror": function (o) {
-      let path = o ? o.fullPath || o.fileName : config.storage.local.active;
+      let path = o ? o.fullPath || o.fileName : config.current.path || config.storage.local.active;
       /*  */
       if (config.editor.v5.codemirror[path]) {
         for (let id in config.editor.v5.UI) config.editor.v5.UI[id].style.display = "none";
         config.editor.v5.UI[path].style.display = "block";
         config.editor.v5.codemirror[path].refresh();
-        config.editor.v5.codemirror[path].focus();
+        /* firefox ignores focus into an element flipped from display:none in
+           the same task - grant it one task later, after layout settles */
+        let codemirror = config.editor.v5.codemirror[path];
+        window.setTimeout(function () {
+          if (config.editor.v5.codemirror[path] === codemirror) codemirror.focus();
+        }, 0);
         config.editor.v5.activate.codemirror();
       } else {
-        config.editor.v5.render.codemirror(o);
+        return config.editor.v5.render.codemirror(o);
       }
     }
   },
@@ -109,9 +114,11 @@ config.editor.v5 = {
                 entries.push(entry);
                 if (entry.isFile) {
                   config.files[entry.fullPath] = entry;
+                  if (entry.picker) config.session.idb.put(entry.fullPath, entry.picker);
                   config.readFile(entry);
                 } else {
                   config.directories[entry.fullPath] = entry;
+                  if (entry.picker) config.session.idb.put(entry.fullPath, entry.picker);
                   config.readDirectory(entry);
                 }
               }
@@ -137,9 +144,16 @@ config.editor.v5 = {
       for (let i = 0; i < table.sidebar.length; i++) table.sidebar[i].removeAttribute("active");
       /*  */
       window.setTimeout(function () {
-        let path = config.storage.local.active;
+        let path = config.current.path || config.storage.local.active;
         let table = document.getElementById("sidebar-table-for-item-" + path);
         if (table) {
+          /* expand every ancestor folder so the active file is visible in the tree */
+          let folder = table.closest("details");
+          while (folder) {
+            folder.setAttribute("open", "");
+            folder = folder.parentElement ? folder.parentElement.closest("details") : null;
+          }
+          /*  */
           let context = document.documentElement.getAttribute("context");
           if (context !== "webapp") {
             table.scrollIntoView({"behavior": "smooth"});
@@ -148,7 +162,7 @@ config.editor.v5 = {
       }, 300);
       /*  */
 			window.setTimeout(function () {
-        let path = config.storage.local.active;
+        let path = config.current.path || config.storage.local.active;
         let codemirror = config.editor.v5.codemirror[path];
         /*  */
         let select = config.elements.sidebar.right.querySelector("select[id='mode']");
@@ -203,11 +217,16 @@ config.editor.v5 = {
         if (parent.table.directory) {
 					if (config.listeners.changed.check.directory(id)) return;
           /*  */
-          for (let name in config.files) {
-            if (config.files[name].fullPath.indexOf(id + '/') !== -1) {
-              config.editor.v5.remove.codemirror(name, true);
-            }
-          }
+          let removed = [id];
+          let childNames = Object.keys(config.files).filter(function (name) {
+            return config.files[name].fullPath.indexOf(id + '/') !== -1;
+          });
+          /*  */
+          config.session.removeFromSession(removed.concat(childNames));
+          /*  */
+          childNames.forEach(function (name) {
+            config.editor.v5.remove.codemirror(name, true, true);
+          });
           /*  */
           delete config.directories[id];
           parent.table.directory.remove();
@@ -232,11 +251,18 @@ config.editor.v5 = {
           /*  */
           config.remove("tabs", id, function () {
             config.remove("files", id, function () {
-              config.remove("cursor", id, function () {});
+              config.remove("cursor", id, function () {
+                if (Object.keys(config.editor.v5.codemirror).length === 0 && config.storage.local["closeEmpty"] !== true) {
+                  document.getElementById("new").click();
+                }
+              });
             });
           });
           /*  */
           if (trusted) {
+            /* purged from the session snapshot, otherwise restore brings it back */
+            config.session.removeFromSession([id]);
+            config.session.idb.del(id);
             delete config.files[id];
             if (parent.table.sidebar) parent.table.sidebar.remove();
           }
@@ -322,7 +348,6 @@ config.editor.v5 = {
           for (let id in config.editor.v5.UI) config.editor.v5.UI[id].style.display = "none";
           config.editor.v5.UI[path] = config.editor.v5.codemirror[path].getWrapperElement();
           /*  */
-					config.custom.style.textContent = ".CodeMirror-code > div {0 4px}";
           config.editor.v5.codemirror[path].on("cursorActivity", config.listeners.cursor.add);
           config.editor.v5.codemirror[path].on("renderLine", config.listeners.render.line);
           config.editor.v5.codemirror[path].on("change", config.listeners.changed.add);
@@ -352,3 +377,8 @@ config.editor.v5 = {
     }
   }
 };
+
+
+
+
+

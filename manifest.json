@@ -1,9 +1,8 @@
-{
-  "version": "0.2.4",
+﻿{
+  "version": "0.2.5",
   "name": "Text Editor",
   "manifest_version": 3,
   "offline_enabled": true,
-  "permissions": ["storage"],
   "optional_permissions": ["downloads"],
   "homepage_url": "https://mybrowseraddon.com/text-editor.html",
   "description": "A free, highly customizable text and code editor extension for your browser.",
@@ -13,6 +12,10 @@
   "background": {
     "service_worker": "background.js"
   },
+  "permissions": [
+    "storage", 
+    "unlimitedStorage"
+  ],
   "action": {
     "default_title": "Text Editor",
     "default_icon": {

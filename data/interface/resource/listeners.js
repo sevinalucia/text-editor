@@ -1,18 +1,8 @@
-config.listeners = {
+﻿config.listeners = {
   "timeout": null,
   "mouseup": function () {
     document.body.style.cursor = "default";
     config.elements.sidebar.resize.action = false;
-  },
-  "mousedown": function (e) {
-    let offset = Math.abs(e.target.offsetWidth - e.offsetX);
-    let threshold = config.elements.sidebar.resize.threshold;
-    if (offset < threshold) config.elements.sidebar.resize.action = true;
-    /*  */
-    if (e.which === 2) {
-      let close = config.elements.tabs.querySelector("div[for='" + e.target.id + "']");
-      if (close) close.click();
-    }
   },
   "keydown": function (e) {
     let isSKey = e.which === 83 || e.keyCode === 83 || e.key === 's' || e.code === "KeyS";
@@ -26,14 +16,15 @@ config.listeners = {
   "active": {
     "save": function (e) {
       if (e.isTrusted) {
-        chrome.storage.local.set({"active": config.current.path}, function () {
-          config.storage.local.active = config.current.path;
-        });
+        /* mirror into memory synchronously - the delayed activation markers
+           must never read a stale value while the storage write is pending */
+        config.storage.local.active = config.current.path;
+        chrome.storage.local.set({"active": config.current.path}, function () {});
       }
     }
   },
 	"update": {
-		"info": function (cursor) {
+    "info": function (cursor) {
       let a = "read/write files - chrome.downloads";
       let b = "read/write files - file system access";
       let name = config.current.path ? config.current.path.split('/').pop() : '';
@@ -44,6 +35,21 @@ config.listeners = {
       document.querySelector("#version").setAttribute("value", config.support.fileio.new ? 'b' : 'a');
 		}
 	},
+  "mousedown": function (e) {
+    let offset = Math.abs(e.target.offsetWidth - e.offsetX);
+    let threshold = config.elements.sidebar.resize.threshold;
+    if (offset < threshold) config.elements.sidebar.resize.action = true;
+    /*  */
+    if (e.which === 2) {
+      /* middle click anywhere on a tab row closes it; the close handler lives
+         on the file-tree close button, so resolve it from the sidebar row */
+      let row = e.target.closest ? e.target.closest("table[id*='tabs-table-for-item-']") : null;
+      let key = row ? row.getAttribute("id").replace("tabs-table-for-item-", '') : null;
+      let sidebarRow = key ? document.getElementById("sidebar-table-for-item-" + key) : null;
+      let close = sidebarRow ? sidebarRow.querySelector("td[rule='close'] div") : null;
+      if (close) close.click();
+    }
+  },
   "cursor": {
     "add": function (e) {
       if (e) {
@@ -79,18 +85,26 @@ config.listeners = {
     tmp["sidebar-" + d] = state;
     chrome.storage.local.set(tmp, function () {});
     let timeout = navigator.userAgent.indexOf("Firefox") !== -1 ? 0 : 500;
-    window.setTimeout(config.editor[config.storage.local["cmv"]].update.codemirror, (state === "open" ? timeout : 500));
+    window.setTimeout(function () {
+      let editor = config.editor[config.storage.local["cmv"]];
+      if (editor) editor.update.codemirror();
+    }, (state === "open" ? timeout : 500));
   },
   "click": function (e) {
+    let options = config.options[config.storage.local["cmv"]];
     let hide = {"flag": {}, "clicked": {}};
-    hide.left = config.options[config.storage.local["cmv"]].codemirror.hideLeftSidebarWhenEditorIsFocused;
-    hide.right = config.options[config.storage.local["cmv"]].codemirror.hideRightSidebarWhenEditorIsFocused;
+    hide.left = options ? options.codemirror.hideLeftSidebarWhenEditorIsFocused : false;
+    hide.right = options ? options.codemirror.hideRightSidebarWhenEditorIsFocused : false;
     /*  */
     hide.clicked.a = e.target.getAttribute("class");
     hide.clicked.b = e.target.closest("pre") ? e.target.closest("pre").getAttribute("class") : '';
     /*  */
-    hide.flag.a = hide.clicked.a && hide.clicked.a.indexOf("CodeMirror") !== -1;
-    hide.flag.b = hide.clicked.b && hide.clicked.b.indexOf("CodeMirror") !== -1;
+    let editorclass = function (name) {
+      return name && (name.indexOf("CodeMirror") !== -1 || name.indexOf("cm-editor") !== -1 || name.indexOf("cm-content") !== -1 || name.indexOf("cm-scroller") !== -1 || name.indexOf("cm-line") !== -1);
+    };
+    /*  */
+    hide.flag.a = editorclass(hide.clicked.a);
+    hide.flag.b = editorclass(hide.clicked.b);
     if (hide.flag.a || hide.flag.b) {
       if (hide.left) {
         let left = document.querySelector(".open-left");
@@ -106,14 +120,32 @@ config.listeners = {
   "downloads": function (e) {
     const OLD = config.current.path;
     /*  */
-    if (e.id === config.download.id) {
+    let pending = config.download.pending[e.id];
+    if (e.id === config.download.id || pending) {
       if (e.state) {
-        if (e.state.current === "complete")  {
+        if (e.state.current === "interrupted") {
+          if (config.log) console.warn("download save interrupted:", pending ? pending.path : config.download.path);
+          if (config.save.legacy && config.save.legacy.waiters[e.id]) {
+            /* the tracked save owns flash/alert/dirty-marking through its settle fn */
+            config.save.legacy.notify(e.id, false);
+          } else {
+            config.save.indicate(pending ? pending.path : config.download.path, pending ? pending.name : config.download.name, false);
+            if (pending ? pending.path : config.download.path) config.listeners.changed.add({"path": pending ? pending.path : config.download.path});
+            config.save.legacy.alert((pending && pending.name) || config.download.name || "file", "download was interrupted");
+          }
+          delete config.download.pending[e.id];
+        } else if (e.state.current === "complete")  {
           chrome.downloads.search({"id": e.id}, function (items) {
-            chrome.downloads.erase({}, function () {
+            chrome.downloads.erase({"id": e.id}, function () {
               URL.revokeObjectURL(config.download.url);
               /*  */
-              if (config.download.saveAs) {
+              let done = pending || {"path": config.download.path, "name": config.download.name};
+              config.save.indicate(done.path, done.name, false);
+              delete config.download.pending[e.id];
+              /* resolve the tracked save promise before any rename bookkeeping */
+              config.save.legacy.notify(e.id, true);
+              /*  */
+              if (e.id === config.download.id && config.download.saveAs) {
                 let result = config.editor[config.storage.local["cmv"]].codemirror[OLD].getValue();
                 let fileName = items[0].filename.replace(/^.*[\\\/]/, '');
                 let fullPath = '/' + fileName;
@@ -204,7 +236,7 @@ config.listeners = {
           /*  */
           let flag_1 = closest && closest.indexOf("sidebar-left") !== -1;
           let flag_2 = closest && closest.indexOf("files-container") !== -1;
-          let flag_3 = closest && closest.indexOf("CodeMirror-gutter") !== -1;
+          let flag_3 = closest && (closest.indexOf("CodeMirror-gutter") !== -1 || closest.indexOf("cm-gutters") !== -1);
           if (flag_1 || flag_2 || flag_3) {
             if (config.elements.sidebar.left) {
               let w = parseInt(window.getComputedStyle(config.elements.sidebar.left).width);
@@ -217,17 +249,25 @@ config.listeners = {
     }
   },
   "changed": {
+    "rows": function (key) {
+      /* marker rows are resolved straight by their fixed table ids;
+         building css selectors out of user paths breaks on quote characters */
+      return [
+        document.getElementById("tabs-table-for-item-" + key),
+        document.getElementById("sidebar-table-for-item-" + key)
+      ];
+    },
     "add": function (e, change) {
-      let sidebar = config.elements.sidebar.left.querySelector("div[id*='" + e.path + "']");
-      let tab = config.elements.tabs.querySelector("div[id*='" + e.path + "']");
-      if (sidebar) sidebar.closest("table").setAttribute("changed", '');
-      if (tab) tab.closest("table").setAttribute("changed", '');
+      config.session.capture();
+      if (!e || !e.path) return;
+      config.listeners.changed.rows(e.path).forEach(function (table) {
+        if (table) table.setAttribute("changed", '');
+      });
     },
     "remove": function (id) {
-      let sidebar = config.elements.sidebar.left.querySelector("div[id*='" + id + "']");
-      let tab = config.elements.tabs.querySelector("div[id*='" + id + "']");
-      if (sidebar) sidebar.closest("table").removeAttribute("changed");
-      if (tab) tab.closest("table").removeAttribute("changed");
+      config.listeners.changed.rows(id).forEach(function (table) {
+        if (table) table.removeAttribute("changed");
+      });
     },
     "check": {
 			"all": function () {
@@ -256,13 +296,12 @@ config.listeners = {
 				return false;
 			},
 			"item": function (id) {
-				let changed = {'a': false, 'b': false};
-				let sidebar = config.elements.sidebar.left.querySelector("div[id*='" + id + "']");
-				if (sidebar) changed.a = sidebar.closest("table").getAttribute("changed");
-				let tab = config.elements.tabs.querySelector("div[id*='" + id + "']");
-				if (tab) changed.b = tab.closest("table").getAttribute("changed");
-				/*  */
-				return (changed.a !== null ? true : false) && (changed.b !== null ? true : false);
+				let rows = config.listeners.changed.rows(id);
+				/* dirty when either marker says so - a row can be missing or stale
+				   while the other one is present (mid-save, saveAs rename, races) */
+				return rows.some(function (table) {
+					return table && table.getAttribute("changed") !== null;
+				});
 			}
     }
   }
