@@ -10,6 +10,26 @@
       return words && words.length ? words.join(' ') : ID;
     }
   },
+  "apply": {
+    "mode": async function (mode) {
+      /*
+        v6 bakes the language into the view state at creation time, so a mode
+        pick re-resolves the language description and rebuilds the active view
+      */
+      let path = config.current.path;
+      let adapter = config.editor.v6.codemirror[path];
+      let entry = config.files[path];
+      if (adapter === undefined || adapter.view === undefined || !mode) return;
+      /*  */
+      let lang = await config.editor.v6.language(path.split('/').pop(), mode);
+      adapter.support = lang.desc ? lang.support : null;
+      adapter.fileType = mode;
+      adapter.mode = mode;
+      if (entry) entry.fileType = mode;
+      /*  */
+      adapter.rebuild();
+    }
+  },
   "themes": {
     "default": [
       CodeMirror6.EditorView.theme({
@@ -164,7 +184,9 @@
         let main = u.state.selection.main;
         if (!main.empty && !u.view.dom.querySelector(".cm-selectionBackground")) {
           adapter.__healing = true;
-          /* deferred: never mutate the DOM/scroll state from inside the update cycle */
+          /*
+            deferred: never mutate the DOM/scroll state from inside the update cycle
+          */
           window.setTimeout(function () {
             if (!adapter.view) {
               adapter.__healing = false;
@@ -439,6 +461,7 @@
         });
       }
       /*  */
+      config.sidebar.tree.height(container);
       config.sidebar.add.table.file(o, container);
       callback();
     }
@@ -455,7 +478,9 @@
         let path = config.current.path || config.storage.local.active;
         let table = document.getElementById("sidebar-table-for-item-" + path);
         if (table) {
-          /* expand every ancestor folder so the active file is visible in the tree */
+          /*
+            expand every ancestor folder so the active file is visible in the tree
+          */
           let folder = table.closest("details");
           while (folder) {
             folder.setAttribute("open", "");
@@ -469,7 +494,7 @@
         }
       }, 300);
       /*  */
-			window.setTimeout(function () {
+      window.setTimeout(function () {
         let path = config.current.path || config.storage.local.active;
         let codemirror = config.editor.v6.codemirror[path];
         /*  */
@@ -511,7 +536,9 @@
               /*  */
               codemirror.setCursor(cursor.pos);
             } catch (e) {
-              /* a stale stored cursor must never break the editor */
+              /*
+                a stale stored cursor must never break the editor
+              */
             }
           }
         }
@@ -527,7 +554,10 @@
       /*  */
       if (config.directories[id] || parent.table.directory) {
         if (parent.table.directory) {
-					if (config.listeners.changed.check.directory(id)) return;
+          if (config.listeners.changed.check.directory(id)) {
+            let proceed = window.confirm("This folder contains unsaved changes! Close it anyway?");
+            if (proceed === false) return;
+          }
           /*  */
           let removed = [id];
           let childNames = Object.keys(config.files).filter(function (name) {
@@ -565,6 +595,15 @@
           delete config.editor.v6.textarea[id];
           delete config.editor.v6.loading[id];
           delete config.editor.v6.codemirror[id];
+          /*
+            a closed tab leaves no editor - re-point so the next Ctrl+S
+            saves the first remaining document instead of silently
+            no-oping (path '' reads as untitled-clean downstream)
+          */
+          if (config.current.path === id) {
+            let remaining = Object.keys(config.editor.v6.codemirror);
+            config.current.path = remaining.length ? remaining[0] : '';
+          }
           /*  */
           config.remove("tabs", id, function () {
             config.remove("files", id, function () {
@@ -577,19 +616,50 @@
           });
           /*  */
           if (trusted) {
-            /* purged from the session snapshot, otherwise restore brings it back */
+            /*
+              purged from the session snapshot, otherwise restore brings it back
+            */
             config.session.removeFromSession([id]);
             config.session.idb.del(id);
             delete config.files[id];
             if (parent.table.sidebar) parent.table.sidebar.remove();
           }
         } else {
-          config.listeners.changed.remove(id);
           let result = window.confirm(id + " is modified, do you want to save the changes before closing?");
           if (result) {
-            document.getElementById("save").click();
+            /*
+              save THIS file, not whatever tab happens to be active; the
+              original trusted flag rides along (it decides whether the
+              closed file leaves the restore list and the file tree)
+            */
+            let entry = config.files[id];
+            if (entry) {
+              Promise.resolve(config.save[config.support.fileio.new ? "new" : "old"](entry)).then(function () {
+                /*
+                  close only when the save actually landed - the change dot
+                  stays put while a failed save keeps the file open
+                */
+                if (config.listeners.changed.check.item(id) === false) {
+                  config.editor.v6.remove.codemirror(id, true, trusted);
+                }
+              });
+            } else if (id === config.current.path) {
+              /*
+                untitled + active: saving runs saveAs, which renames and closes it
+              */
+              document.getElementById("save").click();
+            } else {
+              config.editor.v6.remove.codemirror(id, true, trusted);
+            }
           } else {
-            config.editor.v6.remove.codemirror(id, true);
+            /*
+              NO closes the tab without saving, but the file keeps its
+              content in the tree and in storage (same as a clean close
+              of an unchanged file would); the reverted editor is gone,
+              so the change dot goes with it
+            */
+            config.listeners.changed.remove(id);
+            config.editor.v6.remove.codemirror(id, true, false);
           }
         }
       }

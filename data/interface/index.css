@@ -82,6 +82,15 @@ table tr td div {
   border-spacing: 0 6px;
 }
 
+.sidebar-left .header div svg {
+  width: 12px;
+  height: 12px;
+  fill: #3a3f47;
+  margin-top: -2px;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+
 .sidebar-left .files-container > .files {
   margin: 5px 0;
 }
@@ -222,7 +231,6 @@ div[class*='sidebar'] .files-container {
   overflow-y: scroll;
   box-sizing: border-box;
   height: calc(100vh - 284px);
-  border-bottom: solid 1px rgba(125, 125, 125, 0.1);
 }
 
 div[class*='sidebar'] .files-container table[id*='directory'] table[changed] div[id] {
@@ -256,8 +264,8 @@ table div[for]:before {
   opacity: 0.9;
   content: '✖';
   color: #939393;
-  font-size: 11px;
-	line-height: 28px;
+  font-size: 10px;
+  line-height: 32px;
 }
 
 table[changed] div[for]:before {
@@ -314,10 +322,14 @@ table div[for]:hover:before {
 div[class*='open-'] {transition: 500ms ease opacity}
 .container, div[class*='sidebar'] {transition: 500ms ease margin}
 
-body.booting div[class*='sidebar'],
+body.booting .container,
 body.booting div[class*='open-'],
-body.booting .container {
+body.booting div[class*='sidebar'] {
 	transition: none !important;
+}
+
+body.saving-session {
+  cursor: progress;
 }
 
 .tabs {
@@ -346,11 +358,11 @@ body.booting .container {
 
 .tabs table[saving] div[for]:before,
 .sidebar-left table[saving] div[for]:before {
+  display: inline-block;
 	content: '●' !important;
+	transform-origin: center;
 	color: #5188e6 !important;
 	font-size: 10px !important;
-	display: inline-block;
-	transform-origin: center;
 	animation: dotpulse 0.7s ease-in-out infinite;
 }
 
@@ -440,7 +452,7 @@ body.booting .container {
   overflow: hidden;
   position: relative;
   resize: horizontal;
-  border-right: solid 1px rgba(125, 125, 125, 0.1);
+  border-right: solid 1px rgb(255 255 255 / 10%);
 }
 
 .sidebar-right {
@@ -494,43 +506,6 @@ body.booting .container {
 .sidebar-left[state='open'] {margin-left: 0}
 .sidebar-right[state='open'] {margin-right: 0}
 
-.ace_search {
-	padding: 5px !important;
-  max-width: 400px !important;
-  margin: 1px 0 0 0 !important;
-  border-color: #26292f !important;
-  background-color: #f3f3f3 !important;
-}
-
-.ace_searchbtn {width: 38px !important}
-.ace_replacebtn {width: 76px !important}
-.ace_search.right {border-radius: 0 0 0 5px !important}
-.ace_searchbtn, .ace_replacebtn {font-size: 12px !important}
-
-.ace_search_field, .ace_searchbtn, .ace_replacebtn {
-	color: #565555;
-	height: 32px !important;
-}
-
-.ace_search_options {
-	float: right;
-  height: 29px;
-	margin: 0 !important;
-}
-
-.ace_button {
-  font-size: 13px;
-  display: inline-block;
-  font-family: monospace;
-	padding: 7px 20px !important;
-}
-
-.ace_searchbtn_close {
-  margin: 5px 5px 0 0 !important;
-  background-position: unset !important;
-  background-color: transparent !important;
-}
-
 .cm-trailingspace {
 	background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAQAAAACCAYAAAB/qH1jAAAABmJLR0QA/wD/AP+gvaeTAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAB3RJTUUH3QUXCToH00Y1UgAAACFJREFUCNdjPMDBUc/AwNDAAAFMTAwMDA0OP34wQgX/AQBYgwYEx4f9lQAAAABJRU5ErkJggg==');
 	background-position: bottom left;
@@ -544,13 +519,16 @@ body.booting .container {
   bottom: 0;
   width: 100%;
   margin: 0 auto;
+  font-size: 0;
   position: absolute;
   z-index: 2147483647;
+  background-color: #26292f;
+  border-top: solid 1px rgba(125, 125, 125, 0.1);
 }
 
 .toolbar div {
   margin: 0;
-  width: 38px;
+  width: 32px;
 	height: 38px;
 	cursor: pointer;
 	user-select: none;
@@ -575,7 +553,7 @@ body.booting .container {
   width: 22px;
   float: right;
   cursor: default;
-  border-left: solid 1px rgba(125, 125, 125, 0.05);
+  border-left: solid 1px rgba(125, 125, 125, 0.10);
 }
 
 #version[value='a'] svg[value='a'] {display: inline}
@@ -583,7 +561,8 @@ body.booting .container {
 
 #version svg {
   display: none;
-  fill: #5a5a5a;
+  fill: #5b5b5b;
+  margin-top: -2px;
 }
 
 .modal {
@@ -647,17 +626,47 @@ body.booting .container {
   background-color: #393d46;
 }
 
-@-moz-document url-prefix() {
-  .info, .ace_button,
-  div[class*='sidebar'] select,
-  #version, textarea, .tabs tr td div,
-  div[class*='sidebar'] input[type='text'],
-  div[class*='sidebar'] input[type='number'] {
-    font-size: 11px;
-    font-family: monaco, 'andale mono', 'lucida console', 'courier new', monospace;
-  }
+html[app='webapp'][context='webapp'] .ext,
+html[app='webapp'][context='webapp'] #openmode {
+  display: none;
 }
 
-html[context='webapp'] .ext {
+html[app='webapp'][context='webapp'] .toolbar div {
+  width: 42px;
+}
+
+html[app='extension'][context='webapp'] #reload {
+  display: none;
+}
+
+html[app='extension'][context='win'] .toolbar div {
+  width: 32px;
+}
+
+html[app='extension'][context='webapp'] .toolbar div {
+  width: 36px;
+}
+
+#openmode svg[value='tab'] {
+  display: none;
+}
+
+#uimode svg[value='sun'] {
+  display: none;
+}
+
+html[context='win'] #openmode svg[value='win'] {
+  display: none;
+}
+
+html[context='win'] #openmode svg[value='tab'] {
+  display: inline;
+}
+
+html[theme='light'] #uimode svg[value='sun'] {
+  display: inline;
+}
+
+html[theme='light'] #uimode svg[value='moon'] {
   display: none;
 }

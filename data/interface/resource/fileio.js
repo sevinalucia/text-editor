@@ -10,7 +10,11 @@ config.remove = function (key, id, callback) {
   if (key && id) {
     chrome.storage.local.get(null, function (e) {
       let storage = {"tabs": e.tabs || {}, "files": e.files || {}, "cursor": e.cursor || {}, "directories": e.directories || {}};
-      if (storage[key][id]) delete storage[key][id];
+      /*
+        the "files"/"directories" maps store null markers - a truthiness
+        check could never delete them, so test key presence instead
+      */
+      if (id in storage[key]) delete storage[key][id];
       /*  */
       config.storage.local[key] = storage[key];
       chrome.storage.local.set(storage, callback);
@@ -54,6 +58,36 @@ config.store = function (key, entry) {
   });
 };
 
+config.linebreak = {
+  /*
+    a BOM never survives readAsText/blob.text() (utf-8 decode strips it),
+    so its presence is sniffed from the first three bytes of the file
+  */
+  "head": function (file) {
+    return new Promise(resolve => {
+      try {
+        file.slice(0, 3).arrayBuffer().then(function (buffer) {
+          let head = new Uint8Array(buffer);
+          resolve(head.length === 3 && head[0] === 239 && head[1] === 187 && head[2] === 191);
+        }, function () {resolve(false)});
+      } catch (e) {
+        resolve(false);
+      }
+    });
+  },
+  "detect": function (text) {
+    return text.indexOf("\r\n") !== -1 ? "crlf" : "lf";
+  },
+  "apply": function (text, eol, bom) {
+    let has = bom === undefined ? text.charCodeAt(0) === 0xFEFF : bom;
+    let result = text;
+    if (eol === "crlf") result = result.replace(/\r\n/g, "\n").replace(/\n/g, "\r\n");
+    else if (eol === "lf") result = result.replace(/\r\n/g, "\n");
+    result = result.replace(/^\uFEFF/, '');
+    return has ? "\uFEFF" + result : result;
+  }
+};
+
 config.readDirectory = async function (directory) {
   if (directory) {
     if (config.support.fileio.new) {
@@ -67,18 +101,42 @@ config.readDirectory = async function (directory) {
       } 
     } else {
       return new Promise(resolve => {
-        let lastError = chrome.runtime.lastError;
         let folder = directory.createReader();
-        folder.readEntries(async entries => {
-          for (let i = 0; i < entries.length; i++) {
-            let entry = entries[i];
+        /*
+          readEntries caps at ~100 entries per call - loop until it returns
+          an empty batch or folders silently lose files
+        */
+        let batch = [];
+        let drain = function () {
+          folder.readEntries(async entries => {
+            if (!entries.length) {
+              for (let i = 0; i < batch.length; i++) {
+                let entry = batch[i];
+                /*  */
+                if (entry.isFile) await config.readFile(entry);
+                else await config.readDirectory(entry);
+              }
+              /*  */
+              batch = [];
+              return resolve();
+            }
             /*  */
-            if (entry.isFile) await config.readFile(entry);
-            else await config.readDirectory(entry);
-          }
-          /*  */
-          resolve();
-        });
+            batch = batch.concat(entries);
+            drain();
+          }, async () => {
+            for (let i = 0; i < batch.length; i++) {
+              let entry = batch[i];
+              /*  */
+              if (entry.isFile) await config.readFile(entry);
+              else await config.readDirectory(entry);
+            }
+            /*  */
+            batch = [];
+            resolve();
+          });
+        };
+        /*  */
+        drain();
       });
     }
   }
@@ -86,15 +144,30 @@ config.readDirectory = async function (directory) {
 
 config.saveAs = {
   "old": function () {
-    config.save.old({"saveAs": true, "fullPath": config.current.path});
+    /*
+      a copy of the store entry rides along so eol/bom/fileName survive
+      the dialog - same formatting carry-over as the picker saveAs
+    */
+    let store = config.files[config.current.path];
+    let entry = store ? Object.assign({}, store, {"saveAs": true}) : {"saveAs": true, "fullPath": config.current.path};
+    config.save.old(entry);
   },
   "new": async function () {
     try {
       let picker = await window.showSaveFilePicker();
       /*  */
       const OLD = config.current.path;
+      /*
+        the copy keeps the source formatting (eol/bom carry-over)
+      */
+      let source = config.files[OLD];
+      let eol = source && source.eol;
+      let bom = source && source.bom;
+      let value = config.editor[config.storage.local["cmv"]].codemirror[OLD].getValue();
+      let safe = config.linebreak.apply(value, eol, bom);
+      /*  */
       let writable = await picker.createWritable();
-      await writable.write(config.editor[config.storage.local["cmv"]].codemirror[OLD].getValue());
+      await writable.write(safe);
       await writable.close();
       /*  */
       let entry = {
@@ -173,50 +246,71 @@ config.readFile = function (entry) {
     if (entry.fullPath) {
       if ((entry.fullPath in config.editor[config.storage.local["cmv"]].codemirror) === false) {
         return new Promise(async resolve => {
-          if (config.support.fileio.new) {
-            let file = await entry.picker.getFile();
-            let result = await file.text();
-            let options = {
-              "result": result,
-              "fileType": file.type,
-              "fileName": file.name,
-              "isFile": entry.isFile,
-              "fullPath": entry.fullPath,
-              "isDirectory": entry.isDirectory
-            };
-            /*  */
-            config.editor[config.storage.local["cmv"]].create.codemirror(options, function () {
-              config.files[entry.fullPath] = {"picker": entry.picker, "fileName": file.name, "fullPath": entry.fullPath, "fileType": file.type};
-              if (entry.picker) config.session.idb.put(entry.fullPath, entry.picker);
-              resolve(options);
-            });
-          } else {
-            let lastError = chrome.runtime.lastError;
-            entry.file(function (file) {
-              let reader = new FileReader();
-              reader.readAsText(file);
-              reader.fileType = file.type;
-              reader.fileName = entry.name;
-              reader.isFile = entry.isFile;
-              reader.fullPath = entry.fullPath;
-              reader.isDirectory = entry.isDirectory;
-              /*  */
-              reader.onload = function (e) {
-                let options = {
-                  "isFile": e.target.isFile,
-                  "result": e.target.result,
-                  "fileType": e.target.fileType,
-                  "fileName": e.target.fileName,
-                  "fullPath": e.target.fullPath,
-                  "isDirectory": e.target.isDirectory
-                };
-                /*  */
-                config.editor[config.storage.local["cmv"]].create.codemirror(options, function () {
-                  config.files[entry.fullPath] = entry;
-                  resolve(options);
-                });
+          /*
+            every failure path must land in resolve() or the awaiting
+            reader hangs forever - picker calls throw, creates can throw
+          */
+          try {
+            if (config.support.fileio.new) {
+              let file = await entry.picker.getFile();
+              let result = await file.text();
+              let bom = await config.linebreak.head(file);
+              let options = {
+                "result": result,
+                "fileType": file.type,
+                "fileName": file.name,
+                "isFile": entry.isFile,
+                "fullPath": entry.fullPath,
+                "isDirectory": entry.isDirectory
               };
-            });
+              /*  */
+              config.editor[config.storage.local["cmv"]].create.codemirror(options, function () {
+                config.files[entry.fullPath] = {
+                  "picker": entry.picker,
+                  "fileName": file.name,
+                  "fullPath": entry.fullPath,
+                  "fileType": file.type,
+                  "eol": config.linebreak.detect(result),
+                  "bom": bom
+                };
+                if (entry.picker) config.session.idb.put(entry.fullPath, entry.picker);
+                resolve(options);
+              });
+            } else {
+              let lastError = chrome.runtime.lastError;
+              entry.file(function (file) {
+                let reader = new FileReader();
+                reader.readAsText(file);
+                reader.fileType = file.type;
+                reader.fileName = entry.name;
+                reader.isFile = entry.isFile;
+                reader.fullPath = entry.fullPath;
+                reader.isDirectory = entry.isDirectory;
+                /*  */
+                reader.onload = function (e) {
+                  let options = {
+                    "isFile": e.target.isFile,
+                    "result": e.target.result,
+                    "fileType": e.target.fileType,
+                    "fileName": e.target.fileName,
+                    "fullPath": e.target.fullPath,
+                    "isDirectory": e.target.isDirectory
+                  };
+                  /*  */
+                  config.linebreak.head(file).then(function (bom) {
+                    entry.eol = config.linebreak.detect(e.target.result);
+                    entry.bom = bom;
+                    config.editor[config.storage.local["cmv"]].create.codemirror(options, function () {
+                      config.files[entry.fullPath] = entry;
+                      resolve(options);
+                    });
+                  });
+                };
+              }, function () {resolve(null)});
+            }
+          } catch (error) {
+            if (config.log) console.error(error);
+            resolve(null);
           }
         });
       } else {
@@ -242,7 +336,9 @@ config.save = {
   "indicate": function (path, name, on) {
     let key = path || name;
     let label = "Saving " + (name || key) + " …";
-    /* a file shows up in the tab bar and the left tree - flash both rows */
+    /*
+      a file shows up in the tab bar and the left tree - flash both rows
+    */
     let targets = [
       document.getElementById("tabs-table-for-item-" + key),
       document.getElementById("sidebar-table-for-item-" + key)
@@ -250,13 +346,16 @@ config.save = {
     /*  */
     targets.forEach(function (table) {
       if (!table) return;
+      /*  */
       if (on) {
         table.setAttribute("saving", "");
         table.__savingSince = Date.now();
         if (table.__savingTitle === undefined) table.__savingTitle = table.getAttribute("title");
         table.setAttribute("title", label);
       } else {
-        /* keep the saving state visible for at least 1.2s */
+        /*
+          keep the saving state visible for at least 1.2s
+        */
         let elapsed = Date.now() - (table.__savingSince || 0);
         let finish = function () {
           table.removeAttribute("saving");
@@ -285,23 +384,43 @@ config.save = {
     }
   },
   "legacy": {
-    "running": false, /* a save-all batch is in progress (old-mode only) */
-    "silent": false,  /* batch mode: suppress per-file alerts, summarize once */
+    /*
+      a save-all batch is in progress (old-mode only)
+    */
+    "running": false,
+    /*
+      batch mode: suppress per-file alerts, summarize once
+    */
+    "silent": false,
     "failed": [],
-    "waiters": {},    /* download id -> settle fn; resolves the save promise */
-    "chain": null,    /* serializer: legacy downloads run strictly one at a time */
-    "timeout": 20000, /* watchdog: firefox sometimes never emits a terminal event */
+    /*
+      download id -> settle fn; resolves the save promise
+    */
+    "waiters": {},
+    /*
+      serializer: legacy downloads run strictly one at a time
+    */
+    "chain": null,
+    /*
+      watchdog: firefox sometimes never emits a terminal event
+    */
+    "timeout": 20000,
     "init": function () {
       if (!config.save.legacy.chain) config.save.legacy.chain = Promise.resolve();
     },
     "push": function (job) {
       config.save.legacy.init();
       let run = config.save.legacy.chain.then(job);
-      /* a failed job must not poison the queue */
+      /*
+        a failed job must not poison the queue
+      */
       config.save.legacy.chain = run.then(function () {}, function () {});
       return run;
     },
-    "notify": function (id, ok) { /* terminal event bridge from listeners.downloads */
+    /*
+      terminal event bridge from listeners.downloads
+    */
+    "notify": function (id, ok) {
       let settle = config.save.legacy.waiters[id];
       if (settle) {
         delete config.save.legacy.waiters[id];
@@ -315,8 +434,10 @@ config.save = {
     }
   },
   "old": function (entry) {
-    /* serialized legacy save; resolves true when the download completed, false otherwise.
-       callers may ignore the result - single-save behavior stays fire-and-forget. */
+    /*
+      serialized legacy save; resolves true when the download completed, false otherwise.
+      callers may ignore the result - single-save behavior stays fire-and-forget.
+    */
     return config.save.legacy.push(function () {
       return new Promise(function (resolve) {
         const option = {};
@@ -330,17 +451,28 @@ config.save = {
           if (config.log) console.warn("legacy save skipped, no editor for", path);
           return resolve(false);
         }
+        let raw = result;
         const type = "fileType" in entry ? entry.fileType : config.options[config.storage.local["cmv"]].codemirror.mode;
+        /*
+          the disk copy gets back the file's original line endings and BOM
+        */
+        result = config.linebreak.apply(result, entry.eol, entry.bom);
         /*  */
         let done = false;
         let watchdog = null;
+        /*
+          the job owns its blob url and waiter slot - the globals may already
+          point at the NEXT queued job when a stuck save settles late
+        */
+        let jobUrl = null;
+        let waitersId = null;
         let settle = function (ok, why) {
           if (done) return;
           done = true;
           window.clearTimeout(watchdog);
           config.save.indicate(path, name, false);
-          URL.revokeObjectURL(config.download.url);
-          delete config.save.legacy.waiters[config.download.id];
+          if (jobUrl !== null) URL.revokeObjectURL(jobUrl);
+          if (waitersId !== null) delete config.save.legacy.waiters[waitersId];
           /*  */
           if (ok) {
             if (config.log) console.info("legacy save complete:", path);
@@ -359,6 +491,7 @@ config.save = {
         config.download.name = name;
         config.download.saveAs = "saveAs" in entry ? entry.saveAs : false;
         config.download.url = URL.createObjectURL((new Blob([result], {"type": type})));
+        jobUrl = config.download.url;
         /*  */
         option["url"] = config.download.url;
         option["conflictAction"] = "overwrite";
@@ -366,14 +499,20 @@ config.save = {
         if (config.download.saveAs === false) option["filename"] = path.replace('/', '');
         /*  */
         if (table) table.options.result = result;
-        /* keep the session snapshot in sync with the downloaded copy */
+        /*
+          keep the session snapshot in sync with the downloaded copy -
+          every snapshot writer stores editor content (line endings stay
+          normalized there, the download carries them instead)
+        */
         if (config.session.data && config.session.data.files && config.session.data.files[path] !== undefined) {
-          config.session.data.files[path] = result;
+          config.session.data.files[path] = raw;
           chrome.storage.local.set({"session.data": config.session.data}, function () {});
         }
         /*  */
         config.listeners.changed.remove(path);
-        /* watchdog guarantees the saving state can never stick forever */
+        /*
+          watchdog guarantees the saving state can never stick forever
+        */
         watchdog = window.setTimeout(function () {settle(false, "timeout")}, config.save.legacy.timeout);
         /*  */
         chrome.downloads.download(option, function (e) {
@@ -384,8 +523,12 @@ config.save = {
             config.download.id = '';
             return settle(false, message);
           }
-          /* register for out-of-order completion/interrupt clearing */
-          config.download.pending[e] = {"path": path, "name": name};
+          /*
+            register for out-of-order completion/interrupt clearing; the url
+            rides in the pending entry so late events revoke their own blob
+          */
+          waitersId = e;
+          config.download.pending[e] = {"path": path, "name": name, "url": jobUrl};
           config.save.legacy.waiters[e] = function (ok) {settle(ok, ok ? '' : 'interrupted')};
           config.download.id = e;
         });
@@ -408,12 +551,19 @@ config.save = {
               const writable = await picker.createWritable();
               const table = document.getElementById("sidebar-table-for-item-" + (path || name));
               const result = config.editor[config.storage.local["cmv"]].codemirror[path].getValue();
-              await writable.write(result);
+              /*
+                the disk copy gets back the file's original line endings and BOM
+              */
+              const safe = config.linebreak.apply(result, entry.eol, entry.bom);
+              await writable.write(safe);
               await writable.close();
               /*  */
-              if (typeof entry.picker.getFile === "function") { // verify the write landed on disk (cheap byte-size check, no full re-read)
+              /*
+                verify the write landed on disk (cheap byte-size check, no full re-read)
+              */
+              if (typeof entry.picker.getFile === "function") {
                 let check = await entry.picker.getFile();
-                let expected = new Blob([result]).size;
+                let expected = new Blob([safe]).size;
                 if (check.size !== expected) {
                   window.alert("Saving '" + (name || path) + "' failed! The file on disk was not updated.");
                   if (config.log) console.warn("save VERIFICATION FAILED for " + path + ": disk size " + check.size + ", expected " + expected);
@@ -427,7 +577,10 @@ config.save = {
               /*  */
               if (table) table.options.result = result;
               /*  */
-              if (config.session.data && config.session.data.files) { // keep the session snapshot in sync with the disk save
+              /*
+                keep the session snapshot in sync with the disk save
+              */
+              if (config.session.data && config.session.data.files) {
                 config.session.data.files[path] = result;
                 chrome.storage.local.set({"session.data": config.session.data}, function () {
                   //
@@ -437,25 +590,33 @@ config.save = {
               config.save.indicate(path, name, false);
               config.listeners.changed.remove(path);
             } catch (e) {
-              /* surface the failure and re-mark the file as unsaved */
+              /*
+                surface the failure and re-mark the file as unsaved
+              */
               config.save.indicate(path, name, false);
               if (config.log) console.warn("save failed for " + path + ":", e && e.message ? e.message : e);
               window.alert("Saving '" + (name || path) + "' failed! " + (e && e.message ? "(" + e.message + ")" : ""));
               config.listeners.changed.add({"path": path});
             }
           } else if (entry.session) {
-            /* session-restored file: persist content back into the session snapshot */
+            /*
+              session-restored file: persist content back into the session snapshot;
+              outside a live snapshot there is no save target - the dot stays on
+            */
             config.save.indicate(path, name, true);
             const result = config.editor[config.storage.local["cmv"]].codemirror[path].getValue();
             if (config.session.data && config.session.data.files) {
               config.session.data.files[path] = result;
               chrome.storage.local.set({"session.data": config.session.data}, function () {});
+              /*  */
+              config.listeners.changed.remove(path);
             }
             /*  */
             config.save.indicate(path, name, false);
-            config.listeners.changed.remove(path);
           } else {
-            /* no handle (lost after restart / old-mode entry): download a copy */
+            /*
+              no handle (lost after restart / old-mode entry): download a copy
+            */
             config.save.old(entry);
           }
         }
@@ -484,11 +645,13 @@ config.fileio = {
     /*  */
     if (id === "openSettings") {
       document.querySelector(".open-right").click();
-    }
-    else if (id === "saveAs") {
+    } else if (id === "exportSettings") {
+      config.backup.export();
+    } else if (id === "importSettings") {
+      config.backup.import();
+    } else if (id === "saveAs") {
       config.saveAs[config.support.fileio.new ? "new" : "old"]();
-    }
-    else if (id === "saveAll") {
+    } else if (id === "saveAll") {
       let cmv = config.storage.local["cmv"];
       let editor = config.editor[cmv];
       if (editor === undefined) return;
@@ -500,11 +663,17 @@ config.fileio = {
         }
       }
       /*  */
-      if (config.support.fileio.new) { /* picker mode: independent concurrent writes */
+      /*
+        picker mode: independent concurrent writes
+      */
+      if (config.support.fileio.new) {
         list.forEach(function (entry) {
           config.save.new(entry);
         });
-      } else if (list.length) { /* legacy mode: firefox only services one download at a time */
+      /*
+        legacy mode: firefox only services one download at a time
+      */
+      } else if (list.length) {
         if (config.save.legacy.running) {
           if (config.log) console.info("save all skipped, a legacy batch is already running");
           return;
@@ -530,8 +699,7 @@ config.fileio = {
           if (config.log) console.info("save all (legacy) finished");
         });
       }
-    }
-    else if (id === "save") {
+    } else if (id === "save") {
       if (config.current.path) {
         let entry = config.files[config.current.path];
         if (entry) {
@@ -540,8 +708,7 @@ config.fileio = {
           config.saveAs[config.support.fileio.new ? "new" : "old"]();
         }
       }
-    }
-    else if (id === "new") {
+    } else if (id === "new") {
       let options = {
         "result": '',
         "fileType": '',
@@ -555,8 +722,7 @@ config.fileio = {
         let item = document.getElementById(options.fileName);
         if (item) item.click();
       });
-    }
-    else if (id === "openFolder") {
+    } else if (id === "openFolder") {
       if (config.support.fileio.new) {
         try {
           let picker = await window.showDirectoryPicker();
@@ -575,29 +741,26 @@ config.fileio = {
           if (config.log) console.error(e);
         }
       }
-    }
-    else if (id === "open") {
+    } else if (id === "open") {
       if (config.support.fileio.new) {
         try {
           let [picker] = await window.showOpenFilePicker();
           /*  */
-          let file = await picker.getFile();
-          if (!file) return;
-          /*  */
-          let result = await file.text();
-          let fullPath = '/' + file.name;
-          config.files[fullPath] = {"picker": picker, "fileName": file.name, "fullPath": fullPath, "fileType": file.type};
-          config.editor[config.storage.local["cmv"]].create.codemirror({
+          let entry = {
             "isFile": true,
-            "result": result,
+            "picker": picker,
             "isDirectory": false,
-            "fileType": file.type,
-            "fileName": file.name,
-            "fullPath": fullPath
-          }, function () {
-            let item = document.getElementById(fullPath);
+            "fullPath": '/' + picker.name
+          };
+          /*
+            the readFile route detects eol/bom and persists the handle -
+            a manual mirror drifts (dots, idb, create callbacks)
+          */
+          let options = await config.readFile(entry);
+          if (options) {
+            let item = document.getElementById(options.fullPath);
             if (item) item.click();
-          });
+          }
         } catch (e) {
           if (config.log) console.error(e);
         }
@@ -624,24 +787,31 @@ config.fileio = {
           reader.onload = function(e) {
             let result = e.target.result;
             let fullPath = '/' + fileName;
-            config.files[fullPath] = {"picker": null, "fileName": fileName, "fullPath": fullPath, "fileType": fileType};
-            config.editor[config.storage.local["cmv"]].create.codemirror({
-              "isFile": true,
-              "result": result,
-              "isDirectory": false,
-              "fileType": fileType,
-              "fileName": fileName,
-              "fullPath": fullPath
-            }, function () {
-              let item = document.getElementById(fullPath);
-              if (item) item.click();
+            /*
+              the input File has no entry.file() bridge, so the BOM is
+              sniffed straight from the blob like readFile does
+            */
+            config.linebreak.head(file).then(function (bom) {
+              config.files[fullPath] = {"picker": null, "fileName": fileName, "fullPath": fullPath, "fileType": fileType, "eol": config.linebreak.detect(result), "bom": bom};
+              config.editor[config.storage.local["cmv"]].create.codemirror({
+                "isFile": true,
+                "result": result,
+                "isDirectory": false,
+                "fileType": fileType,
+                "fileName": fileName,
+                "fullPath": fullPath
+              }, function () {
+                let item = document.getElementById(fullPath);
+                if (item) item.click();
+              });
             });
           };
         });
       }
-    }
-    else {
-      /* files */
+    } else {
+      /*
+        files
+      */
     }
   }
 };

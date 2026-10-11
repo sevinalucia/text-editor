@@ -9,6 +9,23 @@
       return words && words.length ? words.join(' ') : ID;
     }
   },
+  "apply": {
+    "mode": function (mode) {
+      /*
+        a mode picked in the options table acts on the OPEN file; the stored
+        default mode only decides the highlighting of future new files
+      */
+      let path = config.current.path;
+      let codemirror = config.editor.v5.codemirror[path];
+      let entry = config.files[path];
+      if (codemirror === undefined || !mode) return;
+      /*  */
+      codemirror.setOption("mode", mode);
+      codemirror.fileType = mode;
+      codemirror.mode = mode;
+      if (entry) entry.fileType = mode;
+    }
+  },
   "focus": {
     "codemirror": function (o) {
       let path = o ? o.fullPath || o.fileName : config.current.path || config.storage.local.active;
@@ -17,8 +34,10 @@
         for (let id in config.editor.v5.UI) config.editor.v5.UI[id].style.display = "none";
         config.editor.v5.UI[path].style.display = "block";
         config.editor.v5.codemirror[path].refresh();
-        /* firefox ignores focus into an element flipped from display:none in
-           the same task - grant it one task later, after layout settles */
+        /*
+          firefox ignores focus into an element flipped from display:none in
+          the same task - grant it one task later, after layout settles
+        */
         let codemirror = config.editor.v5.codemirror[path];
         window.setTimeout(function () {
           if (config.editor.v5.codemirror[path] === codemirror) codemirror.focus();
@@ -62,20 +81,22 @@
           sidebarBackgroundColor = config.options[cmv].codemirror.sidebarBackgroundColor;
         }
         /*  */
-        config.custom.style.textContent = `
+        let base = `
           .info, div[class*="open-"], div[class="tabs"] *, div[class*="sidebar-"] * {color: ${sidebarFontColor}}
           body, html, option, .tabs, .footer, div[class*="sidebar-"] {background-color: ${sidebarBackgroundColor}}
           .CodeMirror {font-size: ${config.options[cmv].codemirror.fontSize}; line-height: ${config.options[cmv].codemirror.lineHeight}}
         `;
-        /*  */
+        /*
+          the highlight rule appends - replacing textContent here would wipe
+          the base styles out of the shared style element
+        */
         if (config.options[cmv].codemirror.matchHighlighter) {
-          config.custom.style.textContent = `
-            .info, div[class*="open-"], div[class="tabs"] *, div[class*="sidebar-"] * {color: ${sidebarFontColor}}
-            body, html, option, .tabs, .footer, div[class*="sidebar-"] {background-color: ${sidebarBackgroundColor}}
-            .CodeMirror {font-size: ${config.options[cmv].codemirror.fontSize}; line-height: ${config.options[cmv].codemirror.lineHeight}}
+          base += `
             .cm-matchhighlight, .CodeMirror-selection-highlight-scrollbar {background-color: ${config.options[cmv].codemirror.matchHighlighterColor}}
           `;
         }
+        /*  */
+        config.custom.style.textContent = base;
       }
     }
   },
@@ -131,6 +152,7 @@
         });
       }
       /*  */
+      config.sidebar.tree.height(container);
       config.sidebar.add.table.file(o, container);
       callback();
     }
@@ -147,7 +169,9 @@
         let path = config.current.path || config.storage.local.active;
         let table = document.getElementById("sidebar-table-for-item-" + path);
         if (table) {
-          /* expand every ancestor folder so the active file is visible in the tree */
+          /*
+            expand every ancestor folder so the active file is visible in the tree
+          */
           let folder = table.closest("details");
           while (folder) {
             folder.setAttribute("open", "");
@@ -161,7 +185,7 @@
         }
       }, 300);
       /*  */
-			window.setTimeout(function () {
+      window.setTimeout(function () {
         let path = config.current.path || config.storage.local.active;
         let codemirror = config.editor.v5.codemirror[path];
         /*  */
@@ -179,7 +203,7 @@
           /*  */
           let cursor = config.storage.local.cursor[path];
           if (cursor && cursor.pos) {
-						config.listeners.update.info(cursor.pos);
+            config.listeners.update.info(cursor.pos);
             let height = window.getComputedStyle(config.editor.v5.UI[path]).height;
             if (height) {
               let offset = parseInt(height) / 2;
@@ -215,7 +239,10 @@
       /*  */
       if (config.directories[id] || parent.table.directory) {
         if (parent.table.directory) {
-					if (config.listeners.changed.check.directory(id)) return;
+          if (config.listeners.changed.check.directory(id)) {
+            let proceed = window.confirm("This folder contains unsaved changes! Close it anyway?");
+            if (proceed === false) return;
+          }
           /*  */
           let removed = [id];
           let childNames = Object.keys(config.files).filter(function (name) {
@@ -248,6 +275,15 @@
           delete config.editor.v5.UI[id];
           delete config.editor.v5.textarea[id];
           delete config.editor.v5.codemirror[id];
+          /*
+            a closed tab leaves no editor - re-point so the next Ctrl+S
+            saves the first remaining document instead of silently
+            no-oping (path '' reads as untitled-clean downstream)
+          */
+          if (config.current.path === id) {
+            let remaining = Object.keys(config.editor.v5.codemirror);
+            config.current.path = remaining.length ? remaining[0] : '';
+          }
           /*  */
           config.remove("tabs", id, function () {
             config.remove("files", id, function () {
@@ -260,19 +296,50 @@
           });
           /*  */
           if (trusted) {
-            /* purged from the session snapshot, otherwise restore brings it back */
+            /*
+              purged from the session snapshot, otherwise restore brings it back
+            */
             config.session.removeFromSession([id]);
             config.session.idb.del(id);
             delete config.files[id];
             if (parent.table.sidebar) parent.table.sidebar.remove();
           }
         } else {
-          config.listeners.changed.remove(id);
           let result = window.confirm(id + " is modified, do you want to save the changes before closing?");
           if (result) {
-            document.getElementById("save").click();
+            /*
+              save THIS file, not whatever tab happens to be active; the
+              original trusted flag rides along (it decides whether the
+              closed file leaves the restore list and the file tree)
+            */
+            let entry = config.files[id];
+            if (entry) {
+              Promise.resolve(config.save[config.support.fileio.new ? "new" : "old"](entry)).then(function () {
+                /*
+                  close only when the save actually landed - the change dot
+                  stays put while a failed save keeps the file open
+                */
+                if (config.listeners.changed.check.item(id) === false) {
+                  config.editor.v5.remove.codemirror(id, true, trusted);
+                }
+              });
+            } else if (id === config.current.path) {
+              /*
+                untitled + active: saving runs saveAs, which renames and closes it
+              */
+              document.getElementById("save").click();
+            } else {
+              config.editor.v5.remove.codemirror(id, true, trusted);
+            }
           } else {
-            config.editor.v5.remove.codemirror(id, true);
+            /*
+              NO closes the tab without saving, but the file keeps its
+              content in the tree and in storage (same as a clean close
+              of an unchanged file would); the reverted editor is gone,
+              so the change dot goes with it
+            */
+            config.listeners.changed.remove(id);
+            config.editor.v5.remove.codemirror(id, true, false);
           }
         }
       }
@@ -285,7 +352,6 @@
         let width = "100%";
         let data = o.result;
         let name = o.fileName;
-        let update = o.update;
         let mode = o.fileType;
         let path = o.fullPath || name;
         let cmv = config.storage.local["cmv"];
@@ -330,10 +396,13 @@
           config.editor.v5.textarea[path].setAttribute("class", "editor");
           /*  */
           let _mode = mode ? null : CodeMirror.findModeByFileName(name);
-          let _options = config.options[cmv].codemirror;
           let _mime = _mode ? _mode.mime : null;
-          /*  */
-          _options.mode = mode ? mode : (_mime ? _mime : config.options[cmv].codemirror.mode);
+          /*
+            the per-file mode stays local - assigning it on the shared
+            options object would clobber the user's default-mode setting
+          */
+          let _options = Object.assign({}, config.options[cmv].codemirror);
+          _options.mode = mode ? mode : (_mime ? _mime : _options.mode);
           config.editor.v5.codemirror[path] = CodeMirror.fromTextArea(config.editor.v5.textarea[path], _options);
           config.editor.v5.codemirror[path].setSize(width, "calc(100vh - " + offset.h + "px)");
           config.editor.v5.codemirror[path].fileType = _options.mode;
@@ -365,10 +434,15 @@
         } else {
           config.editor.v5.codemirror[path].setSize(width, "calc(100vh - " + offset.h + "px)");
           for (let id in config.options[cmv].codemirror) {
+            /*
+              mode is deliberately skipped here - files carry their own mode
+              (user pick or filename guess); writing the stored default onto
+              every open editor would strip that per-file choice
+            */
             if (id !== "mode") {
               let value = config.options[cmv].codemirror[id];
               config.editor.v5.codemirror[path].setOption(id, value);
-            } else {/* ToDo */}
+            }
           }
         }
         /*  */

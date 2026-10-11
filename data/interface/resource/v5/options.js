@@ -17,7 +17,9 @@ config.options.v5 = {
     "saveAs": undefined,
     "saveAll": undefined,
     "openFolder": undefined,
-    "openSettings": undefined
+    "openSettings": undefined,
+    "exportSettings": undefined,
+    "importSettings": undefined
   },
   "theme": [
     "3024-day", "3024-night", "abbott", "abcdef", "ambiance-mobile", "ambiance", "ayu-dark", "ayu-mirage", "base16-dark", "base16-light", "bespin", "blackboard", "cobalt", "colorforth", "darcula", "default", "dracula", "duotone-dark", "duotone-light", "eclipse", "elegant", "erlang-dark", "gruvbox-dark", "hopscotch", "icecoder", "idea", "isotope", "juejin", "lesser-dark", "liquibyte", "lucario", "material-darker", "material-ocean", "material-palenight", "material", "mbo", "mdn-like", "midnight", "monokai", "moxer", "neat", "neo", "night", "nord", "oceanic-next", "one-dark", "panda-syntax", "paraiso-dark", "paraiso-light", "pastel-on-dark", "railscasts", "rubyblue", "seti", "shadowfox", "solarized", "ssms", "the-matrix", "tomorrow-night-bright", "tomorrow-night-eighties", "ttcn", "twilight", "vibrant-ink", "xq-dark", "xq-light", "yeti", "yonce", "zenburn"
@@ -224,7 +226,9 @@ config.options.v5 = {
     set firstLineNumber (val) {config.storage.write("firstLineNumber", val)},
     get firstLineNumber () {
       let val = config.storage.read("firstLineNumber");
-      /* cm5 needs a positive integer here - legacy booleans/garbage coerce to the default */
+      /*
+        cm5 needs a positive integer here - legacy booleans/garbage coerce to the default
+      */
       return typeof val === "number" && isFinite(val) && Math.floor(val) >= 1 ? Math.floor(val) : 1;
     },
     //

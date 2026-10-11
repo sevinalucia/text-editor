@@ -1,8 +1,8 @@
 var config = {
   "count": 0,
   "files": {},
-  "editor": {},
   "log": false,
+  "editor": {},
   "options": {},
   "directories": {},
   "current": {
@@ -17,12 +17,12 @@ var config = {
     }
   },
   "download": {
-    "id": '', 
-    "url": '', 
-    "saveAs": false,
+    "id": '',
+    "url": '',
     "path": '',
     "name": '',
-    "pending": {}
+    "pending": {},
+    "saveAs": false
   },
   "elements": {
     "toggle": {},
@@ -42,7 +42,9 @@ var config = {
     }
   },
   "sort": {
-    "array": function (e) {return e.sort()},
+    "array": function (e) {
+      return e.sort();
+    },
     "object": function (e) {
       let keys = Object.keys(e);
       return keys.sort().reduce((a, v) => {
@@ -121,21 +123,6 @@ var config = {
   },
   "storage": {
     "local": {},
-    "defaults": {
-      "tabs": {},
-      "files": {},
-      "cmv": "v5",
-			"cursor": {},
-      "sorted": [],
-      "active": null,
-      "directories": {},
-      "session": false,
-      "closeEmpty": true,
-      "open-left": "open",
-      "open-right": "close",
-      "sidebar-left": "open",
-      "sidebar-right": "close"
-    },
     "read": function (id) {
       return config.storage.local[id];
     },
@@ -157,6 +144,24 @@ var config = {
           chrome.storage.local.remove(id);
         }
       }
+    },
+    "defaults": {
+      "tabs": {},
+      "cmv": "v5",
+      "files": {},
+      "cursor": {},
+      "sorted": [],
+      "active": null,
+      "session": false,
+      "autoSave": false,
+      "directories": {},
+      "closeEmpty": true,
+      "open-left": "open",
+      "open-right": "close",
+      "sidebar-left": "open",
+      "autoSaveInterval": 60,
+      "sidebar-right": "close",
+      "interface.theme": "dark"
     }
   },
   "engine": {
@@ -450,9 +455,13 @@ var config = {
       scripts.forEach(function (entry, i) {
         let path = typeof entry === "string" ? entry : entry[0];
         let script = document.createElement("script");
+        /*  */
         script.setAttribute("type", "text/javascript");
         script.setAttribute("src", path + "?t=" + config.engine.stamp);
-        script.async = false; /* preserves execution order for dynamic scripts */
+        /*
+          preserves execution order for dynamic scripts
+        */
+        script.async = false;
         /*  */
         script.addEventListener("load", function () {
           let need = typeof entry === "string" ? null : entry[1];
@@ -480,7 +489,10 @@ var config = {
     "active": function () {
       return config.storage.local["session"] === true;
     },
-    "startAutoFlush": function () { // periodic safety net: flush dirty state even if the window closes without events
+    /*
+      periodic safety net: flush dirty state even if the window closes without events
+    */
+    "startAutoFlush": function () {
       window.setInterval(function () {
         config.session.flush();
       }, 3000);
@@ -491,9 +503,13 @@ var config = {
       if (config.session.timeout) window.clearTimeout(config.session.timeout);
       config.session.timeout = window.setTimeout(config.session.captureNow, 500);
     },
-    "removeFromSession": function (paths) { // remove files/folders from the session snapshot (folder deleted via X)
+    /*
+      remove files/folders from the session snapshot (folder deleted via X)
+    */
+    "removeFromSession": function (paths) {
       let purge = function () {
         if (!config.session.data || !config.session.data.files) return;
+        /*  */
         paths.forEach(function (p) {
           if (config.session.data.files) delete config.session.data.files[p];
           if (config.session.data.open) {
@@ -501,10 +517,13 @@ var config = {
             if (oi !== -1) config.session.data.open.splice(oi, 1);
           }
         });
+        /*  */
         chrome.storage.local.set({"session.data": config.session.data}, function () {});
       };
-      /*  */
-      if (!config.session.data) { // snapshot may not exist yet this run - seed it from storage so the purge still lands
+      /*
+        snapshot may not exist yet this run - seed it from storage so the purge still lands
+      */
+      if (!config.session.data) {
         chrome.storage.local.get({"session.data": null}, function (e) {
           if (!config.session.data && e && e["session.data"]) config.session.data = e["session.data"];
           purge();
@@ -513,26 +532,57 @@ var config = {
         purge();
       }
     },
-    "flush": function () { // synchronous fast-flush for page hide/unload: open editor contents only
+    /*
+      synchronous fast-flush for page hide/unload: open editor contents only
+    */
+    "flush": function () {
       if (!config.session.active() || !config.session.dirty || config.session.restoring) return;
       /*  */
       config.session.dirty = false;
       if (config.session.timeout) window.clearTimeout(config.session.timeout);
       let cmv = config.storage.local["cmv"] || "v5";
-      let stored = config.storage.local["session.data"];
-      let files = stored && stored.files ? JSON.parse(JSON.stringify(stored.files)) : {};
+      /*
+        seed: last written snapshot (keeps closed files and the maps they carry)
+      */
       let open = [];
+      let dirty = [];
+      let seed = config.session.data || config.storage.local["session.data"] || {};
+      let files = seed.files ? JSON.parse(JSON.stringify(seed.files)) : {};
+      let eol = seed.eol ? JSON.parse(JSON.stringify(seed.eol)) : {};
+      let bom = seed.bom ? JSON.parse(JSON.stringify(seed.bom)) : {};
       /*  */
       if (config.editor[cmv]) {
         for (let path in config.editor[cmv].codemirror) {
           if (path.indexOf("untitled") === 0) continue;
-          files[path] = config.editor[cmv].codemirror[path].getValue();
+          let value = config.editor[cmv].codemirror[path].getValue();
+          files[path] = value;
           if (open.indexOf(path) === -1) open.push(path);
+          if (config.listeners.changed.check.item(path)) dirty.push(path);
+          /*
+            metadata of open files (entry first, content fallback)
+          */
+          let entry = config.files[path];
+          if (entry) {
+            eol[path] = entry.eol || config.linebreak.detect(value);
+            if (entry.bom) bom[path] = true;
+            else delete bom[path];
+          } else {
+            eol[path] = config.linebreak.detect(value);
+          }
         }
       }
       /*  */
-      let directories = stored && stored.directories ? stored.directories : Object.keys(config.directories);
-      config.session.data = {"files": files, "open": open, "directories": directories, "active": config.storage.local["active"]};
+      let directories = seed.directories ? seed.directories : Object.keys(config.directories);
+      config.session.data = {
+        "eol": eol,
+        "bom": bom,
+        "open": open,
+        "dirty": dirty,
+        "files": files,
+        "directories": directories,
+        "active": config.storage.local["active"]
+      };
+      /*  */
       chrome.storage.local.set({"session.data": config.session.data}, function () {});
     },
     "idb": {
@@ -591,19 +641,43 @@ var config = {
       /*  */
       let gen = ++config.session.generating;
       let cmv = config.storage.local["cmv"] || "v5";
-      /* base: last successfully written snapshot (keeps files that are not open) */
+      /*
+        base: last successfully written snapshot (keeps files that are not open)
+      */
       let base = config.session.data && config.session.data.files ? config.session.data.files : (config.storage.local["session.data"] && config.storage.local["session.data"].files ? config.storage.local["session.data"].files : {});
+      let seed = config.session.data || config.storage.local["session.data"] || {};
       let files = JSON.parse(JSON.stringify(base));
       let directories = [];
       let open = [];
+      let dirty = [];
+      /*
+        line ending / BOM maps survive for files that are not open right now
+      */
+      let eol = seed.eol ? JSON.parse(JSON.stringify(seed.eol)) : {};
+      let bom = seed.bom ? JSON.parse(JSON.stringify(seed.bom)) : {};
       /*  */
       for (let path in config.editor[cmv].codemirror) {
         if (path.indexOf("untitled") === 0) continue;
-        files[path] = config.editor[cmv].codemirror[path].getValue();
+        let value = config.editor[cmv].codemirror[path].getValue();
+        files[path] = value;
         open.push(path);
+        if (config.listeners.changed.check.item(path)) dirty.push(path);
+        /*
+          refresh the metadata of every open file (fall back to content)
+        */
+        let entry = config.files[path];
+        if (entry) {
+          eol[path] = entry.eol || config.linebreak.detect(value);
+          if (entry.bom) bom[path] = true;
+          else delete bom[path];
+        } else {
+          eol[path] = config.linebreak.detect(value);
+        }
       }
-      /*  */
-      for (let path in config.files) { // first-time files (never snapshotted): read once via handle/entry
+      /*
+        first-time files (never snapshotted): read once via handle/entry
+      */
+      for (let path in config.files) {
         if (files[path] !== undefined) continue;
         let entry = config.files[path];
         let content = null;
@@ -629,9 +703,14 @@ var config = {
       for (let path in config.directories) directories.push(path);
       /*  */
       if (gen !== config.session.generating) return;
+      if (!config.session.active()) return;
+      /*  */
       config.session.dirty = false;
       config.session.data = {
+        "eol": eol,
+        "bom": bom,
         "open": open,
+        "dirty": dirty,
         "files": files,
         "directories": directories,
         "active": config.storage.local["active"]
@@ -662,18 +741,23 @@ var config = {
         /*  */
         try {
           let entry = {
-            "isFile": true,
-            "isDirectory": false,
-            "session": true,
-            "picker": null,
-            "fileName": path.split('/').pop(),
-            "fullPath": path,
             "fileType": '',
-            "result": data.files[path]
+            "isFile": true,
+            "picker": null,
+            "session": true,
+            "fullPath": path,
+            "isDirectory": false,
+            "result": data.files[path],
+            "fileName": path.split('/').pop(),
+            "eol": data.eol ? data.eol[path] : undefined,
+            "bom": data.bom ? !!data.bom[path] : undefined
           };
-          config.files[path] = entry;
           /*  */
-          try { // re-attach the persisted file handle (IndexedDB)
+          config.files[path] = entry;
+          /*
+            re-attach the persisted file handle (IndexedDB)
+          */
+          try {
             let handle = await config.session.idb.get(path);
             if (handle) {
               entry.picker = handle;
@@ -685,7 +769,16 @@ var config = {
           }
           /*  */
           await new Promise(function (resolve) {
-            config.editor[cmv].create.codemirror(entry, resolve);
+            /*
+              a throwing create must still settle the await or the whole
+              restore hangs there forever (outer catch never sees the await)
+            */
+            try {
+              config.editor[cmv].create.codemirror(entry, resolve);
+            } catch (error) {
+              if (config.log) console.error(error);
+              resolve();
+            }
           });
           /*  */
           count++;
@@ -710,24 +803,53 @@ var config = {
       /*  */
       for (let path of open) {
         if (config.files[path] && config.editor[cmv].codemirror[path] === undefined) {
-          /* create the tab BEFORE focusing so the tab bar height is measured correctly */
-          config.current.path = path;
-          let table = document.getElementById("sidebar-table-for-item-" + path);
-          if (table && document.getElementById("tabs-table-for-item-" + path) === null) {
-            config.sidebar.add.table.tabs(table);
+          /*
+            a throwing focus must not reject the restore - a rejected loop
+            never reaches the restoring reset below, and capture/flush stay
+            disabled for the whole run (same guard shape as the file loop)
+          */
+          try {
+            /*
+              create the tab BEFORE focusing so the tab bar height is measured correctly
+            */
+            config.current.path = path;
+            let table = document.getElementById("sidebar-table-for-item-" + path);
+            if (table && document.getElementById("tabs-table-for-item-" + path) === null) {
+              config.sidebar.add.table.tabs(table);
+            }
+            /*  */
+            await config.editor[cmv].focus.codemirror(config.files[path]);
+          } catch (e) {
+            if (config.log) console.error(e);
           }
-          /*  */
-          await config.editor[cmv].focus.codemirror(config.files[path]);
         }
       }
+      /*  */
+      /*
+        reopen the unsaved-change markers saved with the last snapshot
+      */
+      (data.dirty || []).forEach(function (path) {
+        if (config.files[path]) config.listeners.changed.add({"path": path});
+      });
       /*  */
       config.editor[cmv].update.codemirror();
       /*  */
       let active = data.active;
-      /* only reopen the active file if its tab was open at close time */
+      /*
+        only reopen the active file if its tab was open at close time
+      */
       if (active && (data.open || []).indexOf(active) !== -1 && config.editor[cmv].codemirror[active] === undefined && config.files[active]) {
         await new Promise(function (resolve) {
-          config.editor[cmv].create.codemirror(config.files[active], resolve);
+          /*
+            a throwing create must still settle the await (same guard as the
+            file loop above)
+          */
+          try {
+            config.editor[cmv].create.codemirror(config.files[active], resolve);
+          } catch (error) {
+            if (config.log) console.error(error);
+            resolve();
+          }
         });
       }
       /*  */
@@ -737,7 +859,10 @@ var config = {
         config.editor[cmv].focus.codemirror(config.files[active]);
       }
       /*  */
-      if (config.session.pendingPermissions.length) { // re-request write permission for restored handles on the first user click
+      /*
+        re-request write permission for restored handles on the first user click
+      */
+      if (config.session.pendingPermissions.length) {
         let pending = config.session.pendingPermissions;
         config.session.pendingPermissions = [];
         /*  */
@@ -762,9 +887,192 @@ var config = {
       return count;
     }
   },
+  "autosave": {
+    "timer": null,
+    "active": function () {
+      return config.storage.local["autoSave"] === true;
+    },
+    "interval": function () {
+      let value = Number(config.storage.local["autoSaveInterval"]);
+      return Number.isFinite(value) && value >= 5 ? value * 1000 : 60000;
+    },
+    "apply": function () {
+      config.autosave.stop();
+      if (config.autosave.active()) {
+        config.autosave.timer = window.setInterval(config.autosave.tick, config.autosave.interval());
+      }
+    },
+    "stop": function () {
+      if (config.autosave.timer) {
+        window.clearInterval(config.autosave.timer);
+        config.autosave.timer = null;
+      }
+    },
+    "tick": function () {
+      if (!config.autosave.active()) return;
+      if (config.save.savingCount) return;
+      let editor = config.editor[config.storage.local["cmv"]];
+      if (editor === undefined) return;
+      /*  */
+      for (let path in config.files) {
+        let entry = config.files[path];
+        if (editor.codemirror[path] === undefined) continue;
+        if (config.listeners.changed.check.item(path) === false) continue;
+        /*  */
+        if (config.support.fileio.new) {
+          /*
+            picker handles write straight to disk (session files persist
+            into the snapshot through the same path)
+          */
+          config.save.new(entry);
+        } else {
+          /*
+            legacy/old mode: each disk write queues a download entry for
+            the user to confirm - the session snapshot is the only sane
+            auto-save target there, no download spam
+          */
+          let snapshot = config.session.data;
+          if (snapshot && snapshot.files) {
+            snapshot.files[path] = editor.codemirror[path].getValue();
+            config.session.dirty = true;
+            chrome.storage.local.set({"session.data": snapshot}, function () {});
+            config.listeners.changed.remove(path);
+          }
+        }
+      }
+    }
+  },
+  "backup": {
+    "keys": function () {
+      /*
+        user-facing settings only - workspace state (tabs, files, cursors,
+        session snapshot) and runtime keys never travel in the envelope
+      */
+      let list = [
+        "cmv",
+        "session",
+        "autoSave",
+        "open-left",
+        "open-right",
+        "closeEmpty",
+        "sidebar-left",
+        "sidebar-right",
+        "interface.size",
+        "interface.theme",
+        "autoSaveInterval",
+        "sidebar.left.width"
+      ];
+      /*  */
+      let engine = config.options[config.storage.local["cmv"]];
+      if (engine) list = list.concat(Object.keys(engine.codemirror));
+      /*  */
+      return list;
+    },
+    "apply": function (settings, callback) {
+      let tmp = {};
+      let allowed = config.backup.keys();
+      /*
+        strict per-key typing - an envelope carrying tabSize: "abc" or a
+        string for a boolean switch must not reach storage (missing keys
+        fall back to getters, but present-and-broken types would persist
+        until a factory reset)
+      */
+      let typecheck = function (key, value) {
+        let current = config.storage.local[key];
+        if (current === undefined) {
+          return typeof value !== "object" && typeof value !== "function";
+        }
+        /*  */
+        return typeof value === typeof current;
+      };
+      /*  */
+      for (let i = 0; i < allowed.length; i++) {
+        let key = allowed[i];
+        if (key in settings && typecheck(key, settings[key])) tmp[key] = settings[key];
+      }
+      /*  */
+      chrome.storage.local.set(tmp, callback);
+    },
+    "export": function () {
+      let settings = {};
+      let source = config.storage.local;
+      let anchor = document.createElement("a");
+      /*  */
+      for (let key of config.backup.keys()) {
+        if (source[key] !== undefined) settings[key] = source[key];
+      }
+      /*  */
+      let envelope = {"app": "text-editor", "format": 1, "settings": settings};
+      let url = URL.createObjectURL(new Blob([JSON.stringify(envelope, null, 2)], {"type": "application/json"}));
+      /*
+        href goes in through setAttribute - the literal string trips the audit
+      */
+      anchor.setAttribute("href", url);
+      anchor.setAttribute("download", "text-editor-settings.json");
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      /*  */
+      window.setTimeout(function () {URL.revokeObjectURL(url)}, 500);
+    },
+    "import": function () {
+      let input = document.createElement("input");
+      document.body.appendChild(input);
+      input.style.display = "none";
+      input.setAttribute("type", "file");
+      input.setAttribute("accept", ".json,application/json");
+      input.addEventListener("change", function (e) {
+        let file = e.target.files[0];
+        if (!file) return;
+        document.body.removeChild(input);
+        /*
+          reset in case the same input is ever reused
+        */
+        input.value = '';
+        let reader = new FileReader();
+        reader.onload = function () {
+          let envelope = null;
+          try {
+            envelope = JSON.parse(reader.result);
+          } catch (error) {
+            return window.alert("Import failed! The file is not valid JSON.");
+          }
+          /*  */
+          if (!envelope || envelope.app !== "text-editor" || !envelope.settings) {
+            return window.alert("Import failed! This is not a Text Editor settings file.");
+          }
+          /*  */
+          config.backup.apply(envelope.settings, function () {
+            /*
+              the reload button re-reads every control from storage and
+              keeps the unsaved-changes guard intact
+            */
+            document.getElementById("reload").click();
+          });
+        };
+        /*  */
+        reader.readAsText(file);
+      });
+      /*  */
+      input.click();
+    }
+  },
   "app": {
+    "initiate": function () {
+      /*
+        marks surface type: the window/tab switch button hides in the web
+        version, where runtime messaging is absent
+      */
+      if (typeof chrome === "object" && chrome.runtime && chrome.runtime.id) {
+        document.documentElement.setAttribute("app", "extension");
+      } else {
+        document.documentElement.setAttribute("app", "webapp");
+      }
+    },
     "start": async function () {
-      /* suppress panel transitions until the initial layout has settled */
+      /*
+        suppress panel transitions until the initial layout has settled
+      */
       document.body.classList.add("booting");
       /*  */
       for (let id in config.storage.defaults) {
@@ -777,6 +1085,12 @@ var config = {
       config.elements.sidebar.left.setAttribute("state", config.storage.local["sidebar-left"]);
       config.elements.sidebar.right.setAttribute("state", config.storage.local["sidebar-right"]);
       /*  */
+      let width = parseInt(config.storage.local["sidebar.left.width"]);
+      if (Number.isFinite(width) && width >= 200 && width <= window.innerWidth * 0.6) {
+        config.elements.sidebar.left.style.width = width + "px";
+        config.elements.sidebar.left.style.minWidth = width + "px";
+        config.elements.sidebar.left.style.maxWidth = width + "px";
+      }
       await config.fileio.init();
       await config.sidebar.render();
       /*  */
@@ -785,25 +1099,46 @@ var config = {
       config.listeners.action("right", false);
       /*  */
       config.session.startAutoFlush();
+      config.autosave.apply();
+      /*  */
       window.addEventListener("pagehide", function () {config.session.flush()});
-      window.addEventListener("beforeunload", function () {config.session.flush()});
+      window.addEventListener("beforeunload", function (e) {
+        /*
+          with session restore off there is no undo for a lost open, so the
+          native leave-confirm appears while unsaved changes remain
+        */
+        if (config.session.active() === false) {
+          if (config.listeners.changed.check.all()) {
+            e.preventDefault();
+            e.returnValue = '';
+          }
+        }
+        config.session.flush();
+      });
+      /*  */
       document.addEventListener("visibilitychange", function () {if (document.hidden) config.session.flush()});
-      /* re-enable panel transitions once the initial layout has settled */
+      /*
+        re-enable panel transitions once the initial layout has settled
+      */
       window.setTimeout(function () {
         document.body.classList.remove("booting");
       }, 700);
       /*  */
       if (config.support.fileio.old) {
         let openFolder = document.getElementById("openFolder");
-        let container = document.querySelector('div[class*="sidebar"] .files-container')
+        let container = document.querySelector('.sidebar-left .files-container');
         /*  */
-        if (container) container.style.height = "calc(100% - 198px)";
         if (openFolder) openFolder.closest("tr").style.display = "none";
+        /*
+          the tree reserve derives from the (row-hiding-reduced) button table
+        */
+        config.sidebar.tree.height(container);
       }
-      /*  */
-      /* firefox turns a shaky press on a tab into a native drag, which cancels
-         the pending click - native dnd is not wanted here (sortable reorders via
-         mouse events), so suppress dragstart from the tab bar entirely */
+      /*
+        firefox turns a shaky press on a tab into a native drag, which cancels
+        the pending click - native dnd is not wanted here (sortable reorders via
+        mouse events), so suppress dragstart from the tab bar entirely
+      */
       config.elements.tabs.addEventListener("dragstart", function (e) {
         if (e.target && e.target.closest && e.target.closest("table")) {
           e.preventDefault();
@@ -817,15 +1152,19 @@ var config = {
         "animation": 300, 
         "scrollSpeed": 100, 
         "bubbleScroll": true, 
-        "touchStartThreshold": 8,
         "onEnd": config.sorted,
-        "scrollSensitivity": 30
+        "scrollSensitivity": 30,
+        "touchStartThreshold": 8
       });
       /*  */
       window.setTimeout(function () {
         if (config.session.active()) {
           config.session.restore().then(function (count) {
             if (!count) document.getElementById("new").click();
+            /*
+              recovery restore must land in the saved drag order
+            */
+            config.sidebar.reorder();
           });
         } else {
           document.getElementById("new").click();
@@ -835,10 +1174,12 @@ var config = {
   },
   "load": function () {
     const reset = document.getElementById("reset");
+    const uimode = document.getElementById("uimode");
     const reload = document.getElementById("reload");
     const refresh = document.getElementById("refresh");
     const support = document.getElementById("support");
     const donation = document.getElementById("donation");
+    const openmode = document.getElementById("openmode");
     /*  */
     reset.addEventListener("click", function () {
       config.reset();
@@ -860,11 +1201,26 @@ var config = {
       chrome.tabs.create({"url": url, "active": true});
     }, false);
     /*  */
+    openmode.addEventListener("click", function () {
+      let mode = document.documentElement.getAttribute("context");
+      if (mode === "win") background.send("totab");
+      else background.send("towindow");
+    });
+    /*  */
+    uimode.addEventListener("click", function () {
+      let current = document.documentElement.getAttribute("theme") === "dark" ? "light" : "dark";
+      document.documentElement.setAttribute("theme", current);
+      config.storage.write("interface.theme", current);
+    });
+    /*  */
     reload.addEventListener("click", function () {
       if (config.listeners.changed.check.all()) {
-        return window.confirm("There are some unsaved changes! Please save all files before reloading the app.");
-      } else {}
-      //
+        /*
+          confirm must act: cancel stays here, OK proceeds to reload
+        */
+        let proceed = window.confirm("There are some unsaved changes! Please save all files before reloading the app. Reload anyway?");
+        if (proceed === false) return;
+      }
       document.location.reload();
     });
     /*  */
@@ -878,18 +1234,26 @@ var config = {
     /*  */
     config.custom.style.textContent = '';
     document.documentElement.appendChild(config.custom.style);
-    chrome.storage.onChanged.addListener(function (e) {if ("tabs" in e) config.sorted()});
+    /*  */
+    chrome.storage.onChanged.addListener(function (e) {
+      if ("tabs" in e) config.sorted();
+      if ("interface.theme" in e) document.documentElement.setAttribute("theme", e["interface.theme"].newValue || "dark");
+    });
+    /*  */
     config.elements.toggle.left.addEventListener("click", function () {config.listeners.action("left", true)});
     config.elements.toggle.right.addEventListener("click", function () {config.listeners.action("right", true)});
-    /*  */
-    /* double-clicking the empty area of the tab bar opens a fresh untitled
-       file - detected as two presses within 500ms directly on mousedown so it
-       works identically in every browser and never fires on a single press */
+    /*
+      double-clicking the empty area of the tab bar opens a fresh untitled
+      file - detected as two presses within 500ms directly on mousedown so it
+      works identically in every browser and never fires on a single press
+    */
     let blankStamp = 0;
+    /*  */
     config.elements.tabs.addEventListener("mousedown", function (e) {
       if (e.target !== config.elements.tabs) return;
       if (e.button !== 0 || e.isTrusted === false) return;
       if (!config.elements.tabs.querySelector("table")) return;
+      /*  */
       if (Date.now() - blankStamp < 500) {
         blankStamp = 0;
         if (config.log) console.info("blank tab bar double press -> new file");
@@ -900,6 +1264,7 @@ var config = {
     });
     /*  */
     config.storage.load(function () {
+      document.documentElement.setAttribute("theme", config.storage.local["interface.theme"] || "dark");
       config.engine.load(config.app.start);
     });
     /*  */

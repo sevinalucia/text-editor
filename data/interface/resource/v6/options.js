@@ -12,7 +12,9 @@ config.options.v6 = {
     "saveAs": undefined,
     "saveAll": undefined,
     "openFolder": undefined,
-    "openSettings": undefined
+    "openSettings": undefined,
+    "exportSettings": undefined,
+    "importSettings": undefined
   },
   "theme": [
     "default",
@@ -242,7 +244,9 @@ config.options.v6 = {
     set firstLineNumber (val) {config.storage.write("firstLineNumber", val)},
     get firstLineNumber () {
       let val = config.storage.read("firstLineNumber");
-      /* unsupported in cm6, keep the row numeric and consistent with v5 */
+      /*
+        unsupported in cm6, keep the row numeric and consistent with v5
+      */
       return typeof val === "number" && isFinite(val) && Math.floor(val) >= 1 ? Math.floor(val) : 1;
     },
     //

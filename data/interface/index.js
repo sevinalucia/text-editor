@@ -31,8 +31,7 @@ var background = {
   },
   "send": function (id, data) {
     if (id) {
-      let context = document.documentElement.getAttribute("context");
-      if (context !== "webapp") {
+      if (typeof chrome === "object" && chrome.runtime && chrome.runtime.id) {
         chrome.runtime.sendMessage({
           "method": id,
           "data": data,
@@ -60,6 +59,7 @@ var background = {
   }
 };
 
+config.app.initiate();
 config.port.connect();
 
 document.addEventListener("keydown", config.listeners.keydown, false);
